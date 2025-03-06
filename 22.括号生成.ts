@@ -9,19 +9,20 @@ function generateParenthesis(n: number): string[] {
   const result: string[] = [];
 
   const dfs = (val: string, leftCount: number, rightCount: number) => {
-    if (leftCount === 1) {
-      if (rightCount === 1) {
-        result.push(val + ")");
-      } else {
-        dfs(val + ")", leftCount, rightCount - 1);
-      }
-    } else {
-      // TODO:还没处理完
+    if (leftCount === 0 && rightCount === 0) {
+      result.push(val);
+      return;
+    }
+
+    if (leftCount > 0) {
+      dfs(val + "(", leftCount - 1, rightCount);
+    }
+    if (rightCount > 0 && rightCount > leftCount) {
+      dfs(val + ")", leftCount, rightCount - 1);
     }
   };
 
   dfs("", n, n);
-
   return result;
 }
 // @lc code=end
