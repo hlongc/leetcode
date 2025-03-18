@@ -21,7 +21,7 @@
 
 function countNodes(root: TreeNode | null): number {
   if (!root) return 0;
-  let lh,
+  let lh = 0,
     rh = 0;
   let lNode: TreeNode | null = root;
   let rNode: TreeNode | null = root;
@@ -37,7 +37,7 @@ function countNodes(root: TreeNode | null): number {
   }
   // 如果左右的深度一样，说明是个完美二叉树，完美二叉树节点个数就是2^h-1
   if (lh === rh) {
-    return 2 ** (lh - 1);
+    return 2 ** lh - 1;
   }
   // 如果不是完美二叉树那就递归计算
   return 1 + countNodes(root.left) + countNodes(root.right);
