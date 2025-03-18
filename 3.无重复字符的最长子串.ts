@@ -12,6 +12,7 @@ function lengthOfLongestSubstring(s: string): number {
   for (let l = 0, r = 0; r < s.length; r++) {
     const char = s[r];
     if (map.has(char)) {
+      // 这是为了确保窗口不会往回收缩。例如字符串"abba"
       l = Math.max(map.get(char)! + 1, l);
     }
     map.set(char, r);

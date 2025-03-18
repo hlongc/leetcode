@@ -26,7 +26,7 @@ function isValid(s: string): boolean {
       }
     }
   }
-
+  // 可能还有剩余的多余括号
   return list.length === 0;
 }
 // @lc code=end
