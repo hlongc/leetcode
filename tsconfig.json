@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "strict": true
+  },
+  "include": [
+    "global.d.ts", // 确保这里包含 global.d.ts
+    "**/*.ts",
+    "404.左叶子之和 copy.js"
+  ]
+}

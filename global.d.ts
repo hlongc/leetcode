@@ -1,5 +1,9 @@
-declare class TreeNode {
-  val: number;
-  left: TreeNode | null;
-  right: TreeNode | null;
+declare global {
+  class TreeNode {
+    val: number;
+    left: TreeNode | null;
+    right: TreeNode | null;
+  }
 }
+
+export {};
