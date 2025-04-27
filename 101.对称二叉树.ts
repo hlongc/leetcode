@@ -22,7 +22,7 @@
 function isSymmetric1(root: TreeNode | null): boolean {
   if (!root) return true;
 
-  const check = (left: TreeNode | null, right: TreeNode | null) => {
+  const check = (left: TreeNode | null, right: TreeNode | null): boolean => {
     if (!left && !right) return true;
     if (left && right) {
       return (
