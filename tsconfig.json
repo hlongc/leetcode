@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ES2016",
     "module": "commonjs",
-    "strict": true
+    "strict": true,
+    "lib": ["ES2021"]
   },
   "include": [
     "global.d.ts", // 确保这里包含 global.d.ts
