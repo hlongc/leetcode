@@ -19,6 +19,7 @@ function maxProfit(prices: number[], fee: number): number {
 
   // 遍历每一天的价格
   for (let i = 1; i < n; i++) {
+    const prevCash = cash; // 记录前一天的cash值
     // 计算今天不持有股票的最大利润：
     // 1. 昨天不持有股票，今天继续不持有
     // 2. 昨天持有股票，今天卖出（减去手续费）
@@ -27,7 +28,7 @@ function maxProfit(prices: number[], fee: number): number {
     // 计算今天持有股票的最大利润：
     // 1. 昨天持有股票，今天继续持有
     // 2. 昨天不持有股票，今天买入
-    hold = Math.max(hold, cash - prices[i]);
+    hold = Math.max(hold, prevCash - prices[i]);
   }
 
   // 最终结果应该是不持有股票状态的最大利润

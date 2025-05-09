@@ -5,24 +5,45 @@
  */
 
 // @lc code=start
+/**
+ * 最长递增子序列 (LIS) - 动态规划解法
+ *
+ * 算法思路：
+ * 1. 使用动态规划求解最长递增子序列问题
+ * 2. 定义状态：dp[i]表示以nums[i]结尾的最长递增子序列的长度
+ * 3. 对于每个位置i，考察之前的所有位置j，如果nums[j] < nums[i]，则可以将nums[i]接在以nums[j]结尾的子序列后面
+ *
+ * 时间复杂度：O(n²)，其中n是数组长度
+ * 空间复杂度：O(n)，需要dp数组存储中间状态
+ *
+ * @param nums 输入数组
+ * @returns 最长递增子序列的长度
+ */
 function lengthOfLIS1(nums: number[]): number {
-  // dp[i]代表从索引0到i的最长递增子序列长度
+  // 创建dp数组，初始值为1（每个元素自身就是长度为1的递增子序列）
+  // dp[i]代表以nums[i]结尾的最长递增子序列长度
   const dp = new Array(nums.length).fill(1);
 
+  // 遍历数组中的每个元素
   for (let i = 0; i < nums.length; i++) {
+    // 对于每个位置i，查看之前的所有位置j
     for (let j = 0; j < i; j++) {
+      // 如果找到一个较小的元素nums[j]，则可以将nums[i]接在其后形成更长的递增子序列
       if (nums[j] < nums[i]) {
+        // 更新dp[i]：取当前值与"dp[j] + 1"中的较大值
+        // dp[j] + 1表示在以nums[j]结尾的最长递增子序列后面接上nums[i]
         dp[i] = Math.max(dp[i], dp[j] + 1);
       }
     }
   }
 
+  // 返回dp数组中的最大值，即为整个数组的最长递增子序列长度
   return Math.max(...dp);
 }
 
 /**
  * 参考链接： https://leetcode.cn/problems/longest-increasing-subsequence/solutions/1033432/dong-tai-gui-hua-he-er-fen-cha-zhao-lian-x7dh/
- * 最长递增子序列 (LIS) - 基于蜘蛛纸牌算法实现
+ * 最长递增子序列 (LIS) - 基于蜘蛛纸牌算法实 现
  *
  * 算法思路：
  * 1. 把数组中的数字想象成扑克牌
