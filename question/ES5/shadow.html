@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <!-- 全局作用域样式 -->
+    <style>
+      h1 {
+        color: blue;
+      }
+      div {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <template id="my-element">
+      <!-- 被添加到 Shadow DOM 内部后，Shadow DOM 作用域生效 -->
+      <style>
+        span {
+          color: red;
+          border: 2px dotted black;
+        }
+      </style>
+      <!-- Shadow DOM 内部的内容，和外部隔离，全局作用域不会生效，颜色为黑色 -->
+      <h1>Hello, Shadow DOM</h1>
+      <!-- 颜色为红色 -->
+      <span>I'm in the shadow DOM</span>
+    </template>
+    <hlc>
+      <style>
+        @scope {
+          div {
+            color: orange;
+          }
+        }
+      </style>
+      <div>我是hlc</div>
+    </hlc>
+    <div id="host">
+      <!-- Shadow DOM will be attached here -->
+    </div>
+    <!-- 全局作用域样式生效，颜色为蓝色 -->
+    <h1>Hello</h1>
+    <!-- 没有匹配的全局作用域样式，颜色为黑色 -->
+    <span>I'm not in the shadow DOM</span>
+    <div>我是红色的</div>
+    <div>
+      <style>
+        @scope {
+          div {
+            color: pink;
+          }
+        }
+      </style>
+      <div>我是粉红色吧</div>
+    </div>
+  </body>
+
+  <script>
+    const host = document.querySelector("#host");
+    const shadow = host.attachShadow({ mode: "open" });
+    const template = document.getElementById("my-element");
+    shadow.appendChild(template.content);
+  </script>
+</html>

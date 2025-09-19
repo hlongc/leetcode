@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      // 创建一个空的 fakeWindow 对象
+      const fakeWindow = {};
+
+      // 打印 window 对象上不可配置的属性
+      // 例如：
+      //   [
+      //     "Infinity",
+      //     "NaN",
+      //     "undefined",
+      //     "window",
+      //     "document",
+      //     "location",
+      //     "top",
+      //     "chrome",
+      //     "__SINGLE_SPA_DEVTOOLS__",
+      //     "__REACT_DEVTOOLS_GLOBAL_HOOK__",
+      //   ];
+      console.log(
+        Object.getOwnPropertyNames(window).filter((prop) => {
+          const descriptor = Object.getOwnPropertyDescriptor(window, prop);
+          return descriptor && !descriptor.configurable;
+        })
+      );
+
+      // 代理 window 对象
+      const windowProxy = new Proxy(fakeWindow, {
+        getOwnPropertyDescriptor(target, prop) {
+          // 因为 window.document 本身不可配置，因此会报 TypeError 错误
+          return Reflect.getOwnPropertyDescriptor(window, prop);
+        },
+      });
+
+      // windowProxy 会传递给微应用，因此在微应用中实际上执行的是
+      // Reflect.getOwnPropertyDescriptor(window, "document")
+      console.log(Reflect.getOwnPropertyDescriptor(windowProxy, "document"));
+      //   Object.getOwnPropertyDescriptor(windowProxy, "window");
+    </script>
+  </body>
+</html>
