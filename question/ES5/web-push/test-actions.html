@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>测试通知Actions</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px 0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      button {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        margin: 8px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      .status {
+        margin: 10px 0;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 500;
+      }
+      .success {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+      }
+      .error {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+      }
+      .warning {
+        background: rgba(241, 196, 15, 0.2);
+        color: #f1c40f;
+      }
+      .info {
+        background: rgba(52, 152, 219, 0.2);
+        color: #3498db;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 测试通知Actions</h1>
+      <p>测试推送通知的actions按钮是否正常工作</p>
+      <div class="status warning">
+        <strong>⚠️ 重要提示：</strong>Actions只能在通过Service
+        Worker显示的通知中使用，不能直接在<code>new Notification()</code
+        >中使用。
+      </div>
+      <div class="status info">
+        <strong>💡 关于Actions限制：</strong>
+        <ul style="margin: 8px 0; padding-left: 20px">
+          <li>大多数浏览器最多支持 <strong>2个</strong> action按钮</li>
+          <li>Chrome/Edge: 最多2个actions</li>
+          <li>Firefox: 最多2个actions</li>
+          <li>Safari: 最多2个actions</li>
+          <li>action值可以自定义，不是固定值</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="container">
+      <h2>📋 系统信息</h2>
+      <div id="systemInfo">检测中...</div>
+    </div>
+
+    <div class="container">
+      <h2>🔔 通知测试</h2>
+      <button id="requestPermission">请求通知权限</button>
+      <button id="testBasicNotification">测试基础通知</button>
+      <button id="testNotificationWithActions">测试带Actions的通知</button>
+      <button id="testTwoActions">测试2个Actions</button>
+      <button id="testOneAction">测试1个Action</button>
+      <button id="testActionDetection">测试Action点击检测</button>
+      <button id="testMultipleNotifications">测试多个通知</button>
+    </div>
+
+    <div class="container">
+      <h2>📝 测试日志</h2>
+      <div id="log"></div>
+    </div>
+
+    <script>
+      // 检查通知支持
+      function checkNotificationSupport() {
+        const systemInfo = document.getElementById("systemInfo");
+
+        if (!("Notification" in window)) {
+          systemInfo.innerHTML = "❌ 此浏览器不支持通知";
+          return false;
+        }
+
+        systemInfo.innerHTML = `
+                <p>✅ 浏览器支持通知</p>
+                <p><strong>通知权限:</strong> ${Notification.permission}</p>
+                <p><strong>用户代理:</strong> ${navigator.userAgent}</p>
+                <p><strong>Actions支持:</strong> ${
+                  Notification.permission === "granted"
+                    ? "需要测试"
+                    : "需要权限"
+                }</p>
+            `;
+        return true;
+      }
+
+      // 请求通知权限
+      async function requestNotificationPermission() {
+        try {
+          const permission = await Notification.requestPermission();
+          updateLog(
+            `通知权限: ${permission}`,
+            permission === "granted" ? "success" : "warning"
+          );
+          return permission === "granted";
+        } catch (error) {
+          updateLog("请求通知权限失败: " + error.message, "error");
+          return false;
+        }
+      }
+
+      // 测试基础通知
+      function testBasicNotification() {
+        if (Notification.permission !== "granted") {
+          updateLog("请先请求通知权限", "warning");
+          return;
+        }
+
+        const notification = new Notification("基础通知测试", {
+          body: "这是一个没有actions的基础通知",
+          tag: "basic-test" + Math.random().toString(36).substr(2, 9),
+        });
+
+        notification.onclick = function () {
+          updateLog("基础通知被点击", "info");
+          notification.close();
+        };
+
+        updateLog("基础通知已显示", "success");
+      }
+
+      // 测试带Actions的通知
+      async function testNotificationWithActions() {
+        if (Notification.permission !== "granted") {
+          updateLog("请先请求通知权限", "warning");
+          return;
+        }
+
+        try {
+          // 检查Service Worker支持
+          if (!("serviceWorker" in navigator)) {
+            updateLog(
+              "❌ 此浏览器不支持Service Worker，无法显示带actions的通知",
+              "error"
+            );
+            updateLog("💡 提示：Actions只能在Service Worker通知中使用", "info");
+            return;
+          }
+
+          // 注册Service Worker
+          const registration = await navigator.serviceWorker.register(
+            "sw-fixed.js"
+          );
+          updateLog("✅ Service Worker已注册", "success");
+
+          // 等待Service Worker激活
+          await navigator.serviceWorker.ready;
+          updateLog("✅ Service Worker已准备就绪", "success");
+
+          // 通过Service Worker显示带actions的通知
+          const notificationOptions = {
+            body: "这是一个带有actions按钮的通知，请点击按钮测试",
+            tag: "actions-test" + Math.random().toString(36).substr(2, 9),
+            requireInteraction: true,
+            actions: [
+              {
+                action: "open",
+                title: "打开1",
+              },
+              {
+                action: "close",
+                title: "关闭2",
+              },
+              {
+                action: "reply",
+                title: "回复3",
+              },
+            ],
+            data: {
+              url: "/",
+              timestamp: Date.now(),
+            },
+          };
+
+          updateLog(
+            `📋 通知配置: ${JSON.stringify(notificationOptions, null, 2)}`,
+            "info"
+          );
+          updateLog(
+            `🔢 Actions数量: ${notificationOptions.actions.length}`,
+            "info"
+          );
+
+          await registration.showNotification(
+            "Actions通知测试",
+            notificationOptions
+          );
+
+          updateLog("✅ 带Actions的通知已通过Service Worker显示", "success");
+          updateLog("💡 请点击通知中的按钮测试actions功能", "info");
+        } catch (error) {
+          updateLog("❌ 显示带actions的通知失败: " + error.message, "error");
+          updateLog("💡 请确保sw-fixed.js文件存在且可访问", "warning");
+        }
+      }
+
+      // 测试2个Actions
+      async function testTwoActions() {
+        if (Notification.permission !== "granted") {
+          updateLog("请先请求通知权限", "warning");
+          return;
+        }
+
+        try {
+          if (!("serviceWorker" in navigator)) {
+            updateLog("❌ 此浏览器不支持Service Worker", "error");
+            return;
+          }
+
+          const registration = await navigator.serviceWorker.register(
+            "sw-fixed.js"
+          );
+          await navigator.serviceWorker.ready;
+
+          const notificationOptions = {
+            title: "2个Actions测试",
+            body: "测试只显示2个action按钮",
+            tag: "two-actions-test" + Math.random().toString(36).substr(2, 9),
+            requireInteraction: true,
+            actions: [
+              {
+                action: "action1",
+                title: "操作1",
+              },
+              {
+                action: "action2",
+                title: "操作2",
+              },
+            ],
+            data: {
+              testType: "two-actions",
+              timestamp: Date.now(),
+            },
+          };
+
+          updateLog(
+            `🔢 测试2个Actions: ${JSON.stringify(notificationOptions.actions)}`,
+            "info"
+          );
+          await registration.showNotification(
+            notificationOptions.title,
+            notificationOptions
+          );
+          updateLog("✅ 2个Actions通知已显示", "success");
+        } catch (error) {
+          updateLog("❌ 2个Actions测试失败: " + error.message, "error");
+        }
+      }
+
+      // 测试1个Action
+      async function testOneAction() {
+        if (Notification.permission !== "granted") {
+          updateLog("请先请求通知权限", "warning");
+          return;
+        }
+
+        try {
+          if (!("serviceWorker" in navigator)) {
+            updateLog("❌ 此浏览器不支持Service Worker", "error");
+            return;
+          }
+
+          const registration = await navigator.serviceWorker.register(
+            "sw-fixed.js"
+          );
+          await navigator.serviceWorker.ready;
+
+          const notificationOptions = {
+            title: "1个Action测试",
+            body: "测试只显示1个action按钮",
+            tag: "one-action-test" + Math.random().toString(36).substr(2, 9),
+            requireInteraction: true,
+            actions: [
+              {
+                action: "single_action",
+                title: "唯一操作",
+              },
+            ],
+            data: {
+              testType: "one-action",
+              timestamp: Date.now(),
+            },
+          };
+
+          updateLog(
+            `🔢 测试1个Action: ${JSON.stringify(notificationOptions.actions)}`,
+            "info"
+          );
+          await registration.showNotification(
+            notificationOptions.title,
+            notificationOptions
+          );
+          updateLog("✅ 1个Action通知已显示", "success");
+        } catch (error) {
+          updateLog("❌ 1个Action测试失败: " + error.message, "error");
+        }
+      }
+
+      // 测试Action点击检测
+      async function testActionDetection() {
+        if (Notification.permission !== "granted") {
+          updateLog("请先请求通知权限", "warning");
+          return;
+        }
+
+        try {
+          if (!("serviceWorker" in navigator)) {
+            updateLog("❌ 此浏览器不支持Service Worker", "error");
+            return;
+          }
+
+          const registration = await navigator.serviceWorker.register(
+            "sw-fixed.js"
+          );
+          await navigator.serviceWorker.ready;
+
+          const notificationOptions = {
+            title: "Action点击检测测试",
+            body: "点击下面的按钮，查看页面日志中的action检测结果",
+            tag:
+              "action-detection-test" + Math.random().toString(36).substr(2, 9),
+            requireInteraction: true,
+            actions: [
+              {
+                action: "like",
+                title: "👍 点赞",
+              },
+              {
+                action: "share",
+                title: "📤 分享",
+              },
+            ],
+            data: {
+              testType: "action-detection",
+              message: "这是一个测试action点击检测的通知",
+              timestamp: Date.now(),
+            },
+          };
+
+          updateLog("🔍 发送Action检测测试通知...", "info");
+          updateLog(
+            `📋 测试Actions: ${JSON.stringify(notificationOptions.actions)}`,
+            "info"
+          );
+
+          await registration.showNotification(
+            notificationOptions.title,
+            notificationOptions
+          );
+
+          updateLog("✅ Action检测测试通知已显示", "success");
+          updateLog(
+            "💡 请点击通知中的按钮，观察页面日志中的action检测结果",
+            "info"
+          );
+        } catch (error) {
+          updateLog("❌ Action检测测试失败: " + error.message, "error");
+        }
+      }
+
+      // 测试多个通知
+      async function testMultipleNotifications() {
+        if (Notification.permission !== "granted") {
+          updateLog("请先请求通知权限", "warning");
+          return;
+        }
+
+        try {
+          // 检查Service Worker支持
+          if (!("serviceWorker" in navigator)) {
+            updateLog(
+              "❌ 此浏览器不支持Service Worker，无法显示带actions的通知",
+              "error"
+            );
+            return;
+          }
+
+          // 注册Service Worker
+          const registration = await navigator.serviceWorker.register(
+            "sw-fixed.js"
+          );
+          await navigator.serviceWorker.ready;
+
+          for (let i = 1; i <= 3; i++) {
+            setTimeout(async () => {
+              try {
+                await registration.showNotification(`多通知测试 ${i}`, {
+                  body: `这是第 ${i} 个通知，测试多个通知的显示`,
+                  tag: `multi-test-${i}`,
+                  requireInteraction: true,
+                  actions: [
+                    {
+                      action: "view",
+                      title: "查看",
+                    },
+                    {
+                      action: "dismiss",
+                      title: "忽略",
+                    },
+                  ],
+                  data: {
+                    index: i,
+                    timestamp: Date.now(),
+                  },
+                });
+
+                updateLog(`✅ 通知 ${i} 已通过Service Worker显示`, "success");
+              } catch (error) {
+                updateLog(`❌ 显示通知 ${i} 失败: ${error.message}`, "error");
+              }
+            }, i * 1000);
+          }
+        } catch (error) {
+          updateLog("❌ 多通知测试失败: " + error.message, "error");
+        }
+      }
+
+      // 更新日志
+      function updateLog(message, type = "info") {
+        const log = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        log.innerHTML += `<div class="status ${type}">[${timestamp}] ${message}</div>`;
+        log.scrollTop = log.scrollHeight;
+      }
+
+      // 设置事件监听器
+      function setupEventListeners() {
+        document
+          .getElementById("requestPermission")
+          .addEventListener("click", requestNotificationPermission);
+        document
+          .getElementById("testBasicNotification")
+          .addEventListener("click", testBasicNotification);
+        document
+          .getElementById("testNotificationWithActions")
+          .addEventListener("click", testNotificationWithActions);
+        document
+          .getElementById("testTwoActions")
+          .addEventListener("click", testTwoActions);
+        document
+          .getElementById("testOneAction")
+          .addEventListener("click", testOneAction);
+        document
+          .getElementById("testActionDetection")
+          .addEventListener("click", testActionDetection);
+        document
+          .getElementById("testMultipleNotifications")
+          .addEventListener("click", testMultipleNotifications);
+      }
+
+      // 监听Service Worker消息
+      function setupServiceWorkerMessageListener() {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.addEventListener("message", (event) => {
+            console.log("收到Service Worker消息:", event.data);
+
+            if (event.data.type === "NOTIFICATION_ACTION_CLICKED") {
+              const { action, notificationData, timestamp } = event.data;
+              const time = new Date(timestamp).toLocaleTimeString();
+
+              updateLog(`🎯 用户点击了Action: "${action}"`, "success");
+              updateLog(
+                `📊 通知数据: ${JSON.stringify(notificationData)}`,
+                "info"
+              );
+              updateLog(`⏰ 点击时间: ${time}`, "info");
+
+              // 根据不同的action显示不同的消息
+              switch (action) {
+                case "open":
+                  updateLog("✅ 用户选择打开应用", "success");
+                  break;
+                case "close":
+                  updateLog("❌ 用户选择关闭通知", "info");
+                  break;
+                case "reply":
+                  updateLog("💬 用户选择回复", "success");
+                  break;
+                case "action1":
+                  updateLog("🔘 用户点击了操作1", "success");
+                  break;
+                case "action2":
+                  updateLog("🔘 用户点击了操作2", "success");
+                  break;
+                case "single_action":
+                  updateLog("🔘 用户点击了唯一操作", "success");
+                  break;
+                case "like":
+                  updateLog("👍 用户点击了点赞", "success");
+                  break;
+                case "share":
+                  updateLog("📤 用户点击了分享", "success");
+                  break;
+                default:
+                  updateLog(`❓ 用户点击了未知操作: ${action}`, "warning");
+              }
+            }
+          });
+        }
+      }
+
+      // 页面加载时初始化
+      window.onload = function () {
+        checkNotificationSupport();
+        setupEventListeners();
+        setupServiceWorkerMessageListener();
+        updateLog("通知Actions测试页面已加载", "info");
+      };
+    </script>
+  </body>
+</html>

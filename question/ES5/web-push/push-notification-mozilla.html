@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>推送通知测试 - Mozilla版本</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px 0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .section {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      button {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        margin: 8px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+      .status {
+        margin: 10px 0;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 500;
+      }
+      .success {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.3);
+      }
+      .error {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+        border: 1px solid rgba(231, 76, 60, 0.3);
+      }
+      .warning {
+        background: rgba(241, 196, 15, 0.2);
+        color: #f1c40f;
+        border: 1px solid rgba(241, 196, 15, 0.3);
+      }
+      .info {
+        background: rgba(52, 152, 219, 0.2);
+        color: #3498db;
+        border: 1px solid rgba(52, 152, 219, 0.3);
+      }
+      h1,
+      h2 {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .mozilla-badge {
+        display: inline-block;
+        background: linear-gradient(45deg, #ff9500, #ff6b35);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔔 推送通知测试 <span class="mozilla-badge">Mozilla版本</span></h1>
+      <p>使用Mozilla推送服务，解决Google FCM连接问题</p>
+    </div>
+
+    <div class="section">
+      <h2>📋 系统信息</h2>
+      <div id="systemInfo">检测中...</div>
+    </div>
+
+    <div class="section">
+      <h2>🔔 推送通知</h2>
+      <button id="requestPermission">请求通知权限</button>
+      <button id="subscribe">订阅推送</button>
+      <button id="unsubscribe">取消订阅</button>
+      <button id="sendTestPush">发送测试推送</button>
+      <button id="sendCustomPush">发送自定义推送</button>
+    </div>
+
+    <div class="section">
+      <h2>📊 统计信息</h2>
+      <button id="getStats">获取订阅统计</button>
+      <button id="cleanupSubscriptions">清理无效订阅</button>
+    </div>
+
+    <div class="section">
+      <h2>🌐 网络状态</h2>
+      <button id="checkNetwork">检查网络状态</button>
+    </div>
+
+    <div class="section">
+      <h2>📝 状态日志</h2>
+      <div id="status"></div>
+    </div>
+
+    <script>
+      // Mozilla推送服务版本
+      // 使用Mozilla推送服务替代Google FCM
+
+      let currentSubscription = null;
+      const SERVER_URL = "http://localhost:3000";
+
+      // 检查通知支持
+      function checkNotificationSupport() {
+        const systemInfo = document.getElementById("systemInfo");
+
+        if (!("Notification" in window)) {
+          systemInfo.innerHTML = "❌ 此浏览器不支持通知";
+          return false;
+        }
+
+        if (!("serviceWorker" in navigator)) {
+          systemInfo.innerHTML = "❌ 此浏览器不支持Service Worker";
+          return false;
+        }
+
+        if (!("PushManager" in window)) {
+          systemInfo.innerHTML = "❌ 此浏览器不支持推送";
+          return false;
+        }
+
+        systemInfo.innerHTML = `
+          <p>✅ 浏览器支持通知</p>
+          <p>✅ 浏览器支持Service Worker</p>
+          <p>✅ 浏览器支持推送</p>
+          <p><strong>通知权限:</strong> ${Notification.permission}</p>
+          <p><strong>推送服务:</strong> Mozilla (updates.push.services.mozilla.com)</p>
+          <p><strong>用户代理:</strong> ${navigator.userAgent}</p>
+        `;
+        return true;
+      }
+
+      // 检查系统信息
+      function checkSystemInfo() {
+        const systemInfo = document.getElementById("systemInfo");
+        systemInfo.innerHTML += `
+          <p><strong>在线状态:</strong> ${
+            navigator.onLine ? "在线" : "离线"
+          }</p>
+          <p><strong>语言:</strong> ${navigator.language}</p>
+          <p><strong>平台:</strong> ${navigator.platform}</p>
+          <p><strong>Cookie启用:</strong> ${
+            navigator.cookieEnabled ? "是" : "否"
+          }</p>
+        `;
+      }
+
+      // 请求通知权限
+      async function requestNotificationPermission() {
+        try {
+          const permission = await Notification.requestPermission();
+          updateStatus(
+            `通知权限: ${permission}`,
+            permission === "granted" ? "success" : "warning"
+          );
+          return permission === "granted";
+        } catch (error) {
+          updateStatus("请求通知权限失败: " + error.message, "error");
+          console.error("Request permission failed:", error);
+          return false;
+        }
+      }
+
+      // 注册Service Worker
+      async function registerServiceWorker() {
+        try {
+          const registration = await navigator.serviceWorker.register(
+            "/sw-fixed.js"
+          );
+          updateStatus("Service Worker注册成功", "success");
+          console.log("Service Worker registered:", registration);
+          return registration;
+        } catch (error) {
+          updateStatus("Service Worker注册失败: " + error.message, "error");
+          console.error("Service Worker registration failed:", error);
+          return null;
+        }
+      }
+
+      // 订阅推送
+      async function subscribeToPush() {
+        try {
+          const registration = await registerServiceWorker();
+          if (!registration) {
+            return;
+          }
+
+          const response = await fetch(`${SERVER_URL}/api/vapid-public-key`);
+          const data = await response.json();
+          const publicKey = data.publicKey;
+
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+
+          currentSubscription = subscription;
+          updateStatus("推送订阅成功 (Mozilla服务)", "success");
+
+          // 发送订阅到服务器
+          await fetch(`${SERVER_URL}/api/push-subscription`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(subscription),
+          });
+
+          updateStatus("订阅已保存到服务器", "success");
+        } catch (error) {
+          updateStatus("订阅推送失败: " + error.message, "error");
+          console.error("Subscribe failed:", error);
+        }
+      }
+
+      // 取消订阅
+      async function unsubscribeFromPush() {
+        try {
+          if (currentSubscription) {
+            await currentSubscription.unsubscribe();
+            currentSubscription = null;
+            updateStatus("推送订阅已取消", "success");
+          } else {
+            updateStatus("没有活跃的订阅", "warning");
+          }
+        } catch (error) {
+          updateStatus("取消订阅失败: " + error.message, "error");
+          console.error("Unsubscribe failed:", error);
+        }
+      }
+
+      // 发送测试推送
+      async function sendTestPush() {
+        if (!currentSubscription) {
+          updateStatus("请先订阅推送", "warning");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${SERVER_URL}/api/send-push`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              subscription: currentSubscription,
+              payload: {
+                title: "Mozilla推送测试",
+                body: "这是通过Mozilla推送服务发送的测试通知",
+                icon: "/icon.png",
+              },
+            }),
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            updateStatus("测试推送发送成功 (Mozilla服务)", "success");
+          } else {
+            updateStatus("测试推送发送失败: " + result.error, "error");
+            if (result.suggestion) {
+              updateStatus("建议: " + result.suggestion, "info");
+            }
+          }
+        } catch (error) {
+          updateStatus("发送测试推送失败: " + error.message, "error");
+          console.error("Send test push failed:", error);
+        }
+      }
+
+      // 发送自定义推送
+      async function sendCustomPush() {
+        if (!currentSubscription) {
+          updateStatus("请先订阅推送", "warning");
+          return;
+        }
+
+        const title = prompt("请输入推送标题:", "Mozilla自定义推送");
+        const body = prompt(
+          "请输入推送内容:",
+          "这是通过Mozilla推送服务发送的自定义通知"
+        );
+
+        if (!title || !body) {
+          updateStatus("推送标题和内容不能为空", "warning");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${SERVER_URL}/api/send-push`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              subscription: currentSubscription,
+              payload: {
+                title: title,
+                body: body,
+                icon: "/icon.png",
+              },
+            }),
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            updateStatus("自定义推送发送成功 (Mozilla服务)", "success");
+          } else {
+            updateStatus("自定义推送发送失败: " + result.error, "error");
+            if (result.suggestion) {
+              updateStatus("建议: " + result.suggestion, "info");
+            }
+          }
+        } catch (error) {
+          updateStatus("发送自定义推送失败: " + error.message, "error");
+          console.error("Send custom push failed:", error);
+        }
+      }
+
+      // 获取订阅统计
+      async function getSubscriptionStats() {
+        try {
+          const response = await fetch(`${SERVER_URL}/api/subscription-stats`, {
+            method: "GET",
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            updateStatus(
+              `订阅统计: 共 ${result.totalSubscriptions} 个订阅`,
+              "success"
+            );
+            console.log("订阅统计:", result);
+
+            // 显示详细统计信息
+            const status = document.getElementById("status");
+            status.innerHTML += `
+              <div class="info">
+                <h4>📊 订阅统计详情</h4>
+                <p><strong>总订阅数:</strong> ${result.totalSubscriptions}</p>
+                <p><strong>推送服务:</strong> Mozilla</p>
+                <p><strong>订阅列表:</strong></p>
+                <ul>
+                  ${result.subscriptions
+                    .map(
+                      (sub) => `<li>${sub.endpoint.substring(0, 50)}...</li>`
+                    )
+                    .join("")}
+                </ul>
+              </div>
+            `;
+          } else {
+            const errorText = await response.text();
+            updateStatus(
+              `获取统计失败: ${response.status} - ${errorText}`,
+              "error"
+            );
+            console.error("获取统计错误:", response.status, errorText);
+          }
+        } catch (error) {
+          updateStatus("获取订阅统计失败: " + error.message, "error");
+          console.error("Get subscription stats failed:", error);
+        }
+      }
+
+      // 清理无效订阅
+      async function cleanupSubscriptions() {
+        try {
+          const response = await fetch(
+            `${SERVER_URL}/api/cleanup-subscriptions`,
+            {
+              method: "POST",
+            }
+          );
+
+          const result = await response.json();
+          if (result.success) {
+            updateStatus(result.message, "success");
+          } else {
+            updateStatus("清理订阅失败: " + result.error, "error");
+          }
+        } catch (error) {
+          updateStatus("清理订阅失败: " + error.message, "error");
+          console.error("Cleanup subscriptions failed:", error);
+        }
+      }
+
+      // 检查网络状态
+      async function checkNetworkStatus() {
+        try {
+          const response = await fetch(`${SERVER_URL}/api/network-status`);
+          const result = await response.json();
+          updateStatus(`网络状态: ${result.message}`, "info");
+          updateStatus(`推送服务: ${result.service}`, "info");
+          console.log("网络状态:", result);
+        } catch (error) {
+          updateStatus("检查网络状态失败: " + error.message, "error");
+          console.error("Check network status failed:", error);
+        }
+      }
+
+      // 工具函数：URL Base64 转 Uint8Array
+      function urlBase64ToUint8Array(base64String) {
+        const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding)
+          .replace(/-/g, "+")
+          .replace(/_/g, "/");
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      }
+
+      // 更新状态
+      function updateStatus(message, type = "info") {
+        const status = document.getElementById("status");
+        const timestamp = new Date().toLocaleTimeString();
+        status.innerHTML += `<div class="status ${type}">[${timestamp}] ${message}</div>`;
+        // 自动滚动到底部
+        status.scrollTop = status.scrollHeight;
+      }
+
+      // 设置事件监听器
+      function setupEventListeners() {
+        // 使用Promise包装所有异步操作，确保错误被正确捕获
+        document
+          .getElementById("requestPermission")
+          .addEventListener("click", async () => {
+            try {
+              await requestNotificationPermission();
+            } catch (error) {
+              updateStatus("请求权限时发生错误: " + error.message, "error");
+              console.error("Request permission error:", error);
+            }
+          });
+
+        document
+          .getElementById("subscribe")
+          .addEventListener("click", async () => {
+            try {
+              await subscribeToPush();
+            } catch (error) {
+              updateStatus("订阅时发生错误: " + error.message, "error");
+              console.error("Subscribe error:", error);
+            }
+          });
+
+        document
+          .getElementById("unsubscribe")
+          .addEventListener("click", async () => {
+            try {
+              await unsubscribeFromPush();
+            } catch (error) {
+              updateStatus("取消订阅时发生错误: " + error.message, "error");
+              console.error("Unsubscribe error:", error);
+            }
+          });
+
+        document
+          .getElementById("sendTestPush")
+          .addEventListener("click", async () => {
+            try {
+              await sendTestPush();
+            } catch (error) {
+              updateStatus("发送测试推送时发生错误: " + error.message, "error");
+              console.error("Send test push error:", error);
+            }
+          });
+
+        document
+          .getElementById("sendCustomPush")
+          .addEventListener("click", async () => {
+            try {
+              await sendCustomPush();
+            } catch (error) {
+              updateStatus(
+                "发送自定义推送时发生错误: " + error.message,
+                "error"
+              );
+              console.error("Send custom push error:", error);
+            }
+          });
+
+        document
+          .getElementById("getStats")
+          .addEventListener("click", async () => {
+            try {
+              await getSubscriptionStats();
+            } catch (error) {
+              updateStatus("获取统计时发生错误: " + error.message, "error");
+              console.error("Get stats error:", error);
+            }
+          });
+
+        document
+          .getElementById("cleanupSubscriptions")
+          .addEventListener("click", async () => {
+            try {
+              await cleanupSubscriptions();
+            } catch (error) {
+              updateStatus("清理订阅时发生错误: " + error.message, "error");
+              console.error("Cleanup subscriptions error:", error);
+            }
+          });
+
+        document
+          .getElementById("checkNetwork")
+          .addEventListener("click", async () => {
+            try {
+              await checkNetworkStatus();
+            } catch (error) {
+              updateStatus("检查网络状态时发生错误: " + error.message, "error");
+              console.error("Check network status error:", error);
+            }
+          });
+      }
+
+      // 页面加载时自动检测
+      window.onload = function () {
+        checkNotificationSupport();
+        checkSystemInfo();
+        setupEventListeners();
+        updateStatus("Mozilla推送服务版本已加载", "info");
+      };
+
+      // 全局错误处理
+      window.addEventListener("error", function (event) {
+        console.error("全局错误:", event.error);
+        updateStatus("发生错误: " + event.error.message, "error");
+      });
+
+      // 未处理的Promise拒绝
+      window.addEventListener("unhandledrejection", function (event) {
+        console.error("未处理的Promise拒绝:", event.reason);
+        updateStatus("Promise错误: " + event.reason, "error");
+        event.preventDefault(); // 防止默认的错误处理
+      });
+    </script>
+  </body>
+</html>

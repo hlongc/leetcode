@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>通知测试</title>
+  </head>
+  <body>
+    <h1>桌面通知测试</h1>
+    <button onclick="notify()">发送通知</button>
+    <button onclick="checkPermission()">检查权限状态</button>
+    <button onclick="testNotification()">测试通知功能</button>
+    <button onclick="checkSystemSettings()">检查系统设置</button>
+    <div id="status"></div>
+    <div id="systemInfo"></div>
+
+    <script>
+      // 检查权限状态
+      function checkPermission() {
+        const status = document.getElementById("status");
+        if (!("Notification" in window)) {
+          status.innerHTML = "❌ 当前浏览器不支持桌面通知";
+          return;
+        }
+
+        const permission = Notification.permission;
+        let statusText = "";
+        switch (permission) {
+          case "granted":
+            statusText = "✅ 浏览器已授权当前网站发送通知";
+            break;
+          case "denied":
+            statusText = "❌ 浏览器已拒绝当前网站发送通知";
+            break;
+          case "default":
+            statusText = "⚠️ 浏览器未设置当前网站的通知权限";
+            break;
+        }
+
+        status.innerHTML = `
+          <h3>浏览器权限状态</h3>
+          <p>${statusText}</p>
+          <p><strong>注意：</strong>这只是浏览器对当前网站的授权状态，不代表系统通知功能是否正常</p>
+        `;
+      }
+
+      // 检查系统设置和浏览器信息
+      function checkSystemSettings() {
+        const systemInfo = document.getElementById("systemInfo");
+        let info = "<h3>系统环境检测</h3>";
+
+        // 浏览器信息
+        info += `<p><strong>浏览器：</strong>${navigator.userAgent}</p>`;
+        info += `<p><strong>平台：</strong>${navigator.platform}</p>`;
+        info += `<p><strong>协议：</strong>${window.location.protocol}</p>`;
+
+        // 通知API支持情况
+        if ("Notification" in window) {
+          info += `<p><strong>通知API：</strong>✅ 支持</p>`;
+          info += `<p><strong>权限状态：</strong>${Notification.permission}</p>`;
+
+          // 检查通知构造函数
+          try {
+            const testNotification = new Notification("测试", { silent: true });
+            testNotification.close();
+            info += `<p><strong>通知创建：</strong>✅ 正常</p>`;
+          } catch (error) {
+            info += `<p><strong>通知创建：</strong>❌ 失败 - ${error.message}</p>`;
+          }
+        } else {
+          info += `<p><strong>通知API：</strong>❌ 不支持</p>`;
+        }
+
+        // 检查是否在安全上下文中
+        if (window.isSecureContext) {
+          info += `<p><strong>安全上下文：</strong>✅ 是 (HTTPS或localhost)</p>`;
+        } else {
+          info += `<p><strong>安全上下文：</strong>❌ 否 (某些浏览器要求HTTPS)</p>`;
+        }
+
+        // 检查焦点状态
+        if (document.hasFocus()) {
+          info += `<p><strong>页面焦点：</strong>✅ 有焦点</p>`;
+        } else {
+          info += `<p><strong>页面焦点：</strong>⚠️ 无焦点 (可能影响通知显示)</p>`;
+        }
+
+        // macOS特定检查
+        if (navigator.platform.includes("Mac")) {
+          info += `<p><strong>macOS检测：</strong>✅ 检测到macOS系统</p>`;
+          info += `<p><strong>系统通知设置检查：</strong></p>`;
+          info += `<ul>
+            <li>1. 打开"系统偏好设置" → "通知与专注模式"</li>
+            <li>2. 找到您的浏览器（Safari/Chrome/Firefox）</li>
+            <li>3. 确保"允许通知"已开启</li>
+            <li>4. 检查"请勿打扰"模式是否关闭</li>
+            <li>5. 确保通知样式不是"横幅"（建议选择"提醒"）</li>
+          </ul>`;
+        }
+
+        systemInfo.innerHTML = info;
+      }
+
+      // 测试通知功能
+      function testNotification() {
+        const status = document.getElementById("status");
+
+        if (!("Notification" in window)) {
+          updateStatus("❌ 浏览器不支持通知API");
+          return;
+        }
+
+        if (Notification.permission !== "granted") {
+          updateStatus("❌ 请先授权通知权限");
+          return;
+        }
+
+        try {
+          // 创建测试通知
+          const testNotification = new Notification("功能测试", {
+            body: "如果您看到这条消息，说明通知功能正常工作",
+            icon: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiM0Q0FGRjUiLz4KPHN2ZyB4PSIyMCIgeT0iMjAiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+",
+            tag: "test-notification",
+            requireInteraction: false,
+          });
+
+          testNotification.onshow = function () {
+            updateStatus("✅ 测试通知已显示 - 功能正常");
+          };
+
+          testNotification.onerror = function (error) {
+            updateStatus("❌ 测试通知显示失败: " + error);
+          };
+
+          testNotification.onclose = function () {
+            updateStatus("测试通知已关闭");
+          };
+
+          // 3秒后自动关闭
+          setTimeout(() => {
+            testNotification.close();
+          }, 3000);
+        } catch (error) {
+          updateStatus("❌ 创建测试通知失败: " + error.message);
+        }
+      }
+
+      // 发送通知
+      function hello() {
+        setTimeout(() => {
+          try {
+            const notification = new Notification("测试通知", {
+              icon: "https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png",
+              badge: "1",
+              body: "这是一条测试通知消息",
+              data: "test-data",
+              requireInteraction: true, // 改为false，让通知自动消失
+              tag: "test-notification", // 添加tag避免重复通知
+            });
+
+            notification.onclose = function () {
+              console.log("通知关闭");
+              updateStatus("通知已关闭");
+            };
+
+            notification.onclick = function () {
+              console.log("通知被点击");
+              updateStatus("通知被点击了！");
+              window.focus();
+              notification.close();
+            };
+
+            notification.onshow = function () {
+              console.log("通知展示");
+              updateStatus("通知已显示");
+            };
+
+            notification.onerror = function (error) {
+              console.error("通知错误:", error);
+              updateStatus("通知显示失败: " + error);
+            };
+
+            // 5秒后自动关闭通知
+            setTimeout(() => {
+              notification.close();
+            }, 5000);
+          } catch (error) {
+            console.error("创建通知失败:", error);
+            updateStatus("创建通知失败: " + error.message);
+          }
+        }, 5000);
+      }
+
+      // 更新状态显示
+      function updateStatus(message) {
+        const status = document.getElementById("status");
+        status.innerHTML = `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+      }
+
+      // 请求通知权限并发送
+      function notify() {
+        console.log("开始请求通知权限...");
+
+        if (!("Notification" in window)) {
+          alert("当前浏览器不支持桌面通知");
+          updateStatus("浏览器不支持通知");
+          return;
+        }
+
+        if (Notification.permission === "granted") {
+          console.log("权限已授权，直接发送通知");
+          hello();
+        } else if (Notification.permission === "denied") {
+          alert("通知权限被拒绝，请在浏览器设置中手动开启");
+          updateStatus("通知权限被拒绝");
+        } else {
+          console.log("请求通知权限...");
+          Notification.requestPermission()
+            .then((permission) => {
+              console.log("权限请求结果:", permission);
+              if (permission === "granted") {
+                updateStatus("权限已授权");
+                hello();
+              } else if (permission === "denied") {
+                alert("通知权限被拒绝");
+                updateStatus("权限被拒绝");
+              } else {
+                updateStatus("权限请求被取消");
+              }
+            })
+            .catch((error) => {
+              console.error("请求权限失败:", error);
+              updateStatus("请求权限失败: " + error.message);
+            });
+        }
+      }
+
+      // 页面加载时检查权限状态
+      window.onload = function () {
+        checkPermission();
+        checkSystemSettings();
+      };
+    </script>
+  </body>
+</html>

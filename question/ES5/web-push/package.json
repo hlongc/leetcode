@@ -1,0 +1,39 @@
+{
+  "name": "push-notification-demo",
+  "version": "1.0.0",
+  "description": "浏览器推送通知演示项目",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:ipv4": "node server-ipv4.js",
+    "start:proxy": "node server-proxy.js",
+    "start:simple": "node server-simple.js",
+    "start:mozilla": "node server-mozilla.js",
+    "start:mozilla-ipv4": "node server-mozilla-ipv4.js",
+    "dev": "nodemon server.js",
+    "dev:ipv4": "nodemon server-ipv4.js",
+    "dev:proxy": "nodemon server-proxy.js",
+    "dev:simple": "nodemon server-simple.js",
+    "dev:mozilla": "nodemon server-mozilla.js",
+    "dev:mozilla-ipv4": "nodemon server-mozilla-ipv4.js",
+    "generate-vapid": "node -e \"console.log(require('web-push').generateVAPIDKeys())\"",
+    "network-test": "node network-test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "web-push": "^3.6.6",
+    "cors": "^2.8.5",
+    "https-proxy-agent": "^7.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "push-notifications",
+    "service-worker",
+    "web-push",
+    "browser-notifications"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>创建通知图标</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .icon-container {
+        display: inline-block;
+        margin: 10px;
+        text-align: center;
+      }
+      canvas {
+        border: 1px solid #ddd;
+        margin: 5px;
+      }
+      .download-btn {
+        display: block;
+        margin: 5px auto;
+        padding: 5px 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔔 创建推送通知图标</h1>
+    <p>点击按钮生成并下载通知图标</p>
+
+    <div class="icon-container">
+      <canvas id="icon" width="64" height="64"></canvas>
+      <button class="download-btn" onclick="downloadIcon('icon', 'icon.png')">
+        下载 icon.png
+      </button>
+    </div>
+
+    <div class="icon-container">
+      <canvas id="badge" width="32" height="32"></canvas>
+      <button class="download-btn" onclick="downloadIcon('badge', 'badge.png')">
+        下载 badge.png
+      </button>
+    </div>
+
+    <div class="icon-container">
+      <canvas id="open-icon" width="32" height="32"></canvas>
+      <button
+        class="download-btn"
+        onclick="downloadIcon('open-icon', 'open-icon.png')"
+      >
+        下载 open-icon.png
+      </button>
+    </div>
+
+    <div class="icon-container">
+      <canvas id="close-icon" width="32" height="32"></canvas>
+      <button
+        class="download-btn"
+        onclick="downloadIcon('close-icon', 'close-icon.png')"
+      >
+        下载 close-icon.png
+      </button>
+    </div>
+
+    <script>
+      // 创建图标
+      function createIcon(canvasId, text, color, bgColor) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext("2d");
+
+        // 设置背景
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 设置文字
+        ctx.fillStyle = color;
+        ctx.font = `${canvas.width / 4}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      }
+
+      // 下载图标
+      function downloadIcon(canvasId, filename) {
+        const canvas = document.getElementById(canvasId);
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = canvas.toDataURL();
+        link.click();
+      }
+
+      // 页面加载时创建图标
+      window.onload = function () {
+        createIcon("icon", "🔔", "#ffffff", "#007bff");
+        createIcon("badge", "1", "#ffffff", "#ff4444");
+        createIcon("open-icon", "▶", "#ffffff", "#28a745");
+        createIcon("close-icon", "✕", "#ffffff", "#dc3545");
+      };
+    </script>
+  </body>
+</html>
