@@ -64,39 +64,26 @@
 
 // @lc code=start
 function canCompleteCircuit(gas: number[], cost: number[]): number {
-  // netGas: 从当前起点出发到当前位置累积的净油量
-  // totalCost: 所有路段的总消耗量
-  // totalGas: 所有加油站的总加油量
-  // start: 可能的起始加油站索引
-  let netGas = 0,
-    totalCost = 0,
-    totalGas = 0,
-    start = 0;
+  let totalTank = 0; // 总油量（用于判断是否有解）
+  let currentTank = 0; // 当前油量（从当前起点出发的累积油量）
+  let start = 0; // 可能的起始加油站索引
 
-  // 遍历所有加油站
   for (let i = 0; i < gas.length; i++) {
-    // 累加总消耗量
-    totalCost += cost[i];
-    // 累加总加油量
-    totalGas += gas[i];
-    // 累加当前路径的净油量(加油量减去消耗量)
-    netGas += gas[i] - cost[i];
+    // 计算总油量（用于最后判断是否有解）
+    totalTank += gas[i] - cost[i];
 
-    // 如果从当前起点出发，累积油量变为负值
-    // 说明无法从start到达i+1站点
-    if (netGas < 0) {
-      // 将起点更新为下一个站点
-      start = i + 1;
-      // 重置累积油量为0
-      netGas = 0;
+    // 计算从当前起点出发的累积油量
+    currentTank += gas[i] - cost[i];
+
+    // 如果从当前起点出发，油量变为负值
+    // 说明无法从start到达i+1站点，需要尝试新的起点
+    if (currentTank < 0) {
+      start = i + 1; // 将起点更新为下一个站点
+      currentTank = 0; // 重置当前油量
     }
   }
 
-  // 判断总体是否有解：总加油量必须大于等于总消耗量
-  // 如果总加油量小于总消耗量，无论从哪个站点出发都不可能环绕一周
-  if (totalGas < totalCost) return -1;
-
-  // 返回有效的起始站点
-  return start;
+  // 如果总油量不够，无论从哪个站点出发都不可能环绕一周
+  return totalTank >= 0 ? start : -1;
 }
 // @lc code=end

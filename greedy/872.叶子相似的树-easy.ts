@@ -72,67 +72,69 @@
  */
 
 /**
- * 判断两棵二叉树是否叶相似（叶子节点值序列相同）
+ * 获取二叉树中所有叶子节点的值，按从左到右的顺序排列
+ * 使用广度优先搜索（BFS）遍历二叉树
  *
- * 思路：
- * 1. 分别获取两棵树的叶子节点值序列
- * 2. 比较两个序列是否相同
- *
- * @param root1 第一棵二叉树的根节点
- * @param root2 第二棵二叉树的根节点
- * @returns 两棵树是否叶相似
+ * @param node 二叉树的根节点
+ * @returns 叶子节点值的数组，按从左到右的顺序
  */
-function leafSimilar(root1: TreeNode | null, root2: TreeNode | null): boolean {
-  // 获取第一棵树的叶子节点值序列
-  const leaves1: number[] = [];
-  getLeafValues(root1, leaves1);
+function getValues(node: TreeNode | null): number[] {
+  const result: number[] = []; // 存储叶子节点值的数组
 
-  // 获取第二棵树的叶子节点值序列
-  const leaves2: number[] = [];
-  getLeafValues(root2, leaves2);
+  // 如果节点为空，直接返回空数组
+  if (!node) return result;
 
-  // 比较两个叶子节点值序列是否相同
-  // 首先检查长度是否相等
-  if (leaves1.length !== leaves2.length) {
-    return false;
-  }
+  // 使用队列进行广度优先搜索
+  const queue: TreeNode[] = [node];
 
-  // 逐一比较每个叶子节点的值
-  for (let i = 0; i < leaves1.length; i++) {
-    if (leaves1[i] !== leaves2[i]) {
-      return false;
+  // 当队列不为空时，继续处理
+  while (queue.length) {
+    // 从队列头部取出一个节点进行处理
+    const node = queue.shift()!;
+
+    // 检查当前节点是否为叶子节点（没有左右子节点）
+    if (!node.left && !node.right) {
+      result.push(node.val); // 如果是叶子节点，将其值加入结果数组
+    }
+
+    // 如果左子节点存在，将其加入队列头部（保证从左到右的顺序）
+    if (node.left) {
+      queue.unshift(node.left);
+    }
+
+    // 如果右子节点存在，将其加入队列头部
+    if (node.right) {
+      queue.unshift(node.right);
     }
   }
 
-  return true;
+  return result; // 返回所有叶子节点的值
 }
 
 /**
- * 递归获取二叉树的叶子节点值序列
+ * 判断两棵二叉树的叶子节点序列是否相同
+ * 如果两棵树的叶子节点值按从左到右的顺序完全相同，则返回true
  *
- * 使用深度优先搜索（DFS）遍历二叉树，按照从左到右的顺序
- * 收集所有叶子节点的值（叶子节点是指没有子节点的节点）
- *
- * @param node 当前节点
- * @param leaves 存储叶子节点值的数组（结果会被添加到这个数组中）
+ * @param root1 第一棵二叉树的根节点
+ * @param root2 第二棵二叉树的根节点
+ * @returns 如果两棵树的叶子节点序列相同返回true，否则返回false
  */
-function getLeafValues(node: TreeNode | null, leaves: number[]): void {
-  // 如果节点为空，直接返回
-  if (node === null) {
-    return;
+function leafSimilar(root1: TreeNode | null, root2: TreeNode | null): boolean {
+  // 分别获取两棵树的叶子节点值序列
+  const val1 = getValues(root1);
+  const val2 = getValues(root2);
+
+  // 如果两棵树的叶子节点数量不同，直接返回false
+  if (val1.length !== val2.length) return false;
+
+  // 逐个比较两棵树的叶子节点值
+  for (let i = 0; i < val1.length; i++) {
+    if (val1[i] !== val2[i]) {
+      return false; // 发现不同的值，返回false
+    }
   }
 
-  // 判断是否为叶子节点（没有左右子节点）
-  if (node.left === null && node.right === null) {
-    // 是叶子节点，将其值添加到结果数组
-    leaves.push(node.val);
-    return;
-  }
-
-  // 继续递归遍历左子树
-  getLeafValues(node.left, leaves);
-
-  // 继续递归遍历右子树
-  getLeafValues(node.right, leaves);
+  // 所有叶子节点值都相同，返回true
+  return true;
 }
 // @lc code=end

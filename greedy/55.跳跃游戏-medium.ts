@@ -65,9 +65,9 @@ function canJump(nums: number[]): boolean {
   // 从位置0开始，初始最远可到达位置是nums[0]
   let maxReach = nums[0];
 
-  // 遍历数组（只需要遍历到倒数第二个元素）
+  // 遍历数组（需要遍历到最后一个元素，因为元素可能为0）
   // 如果当前位置可达且还没到达终点，继续尝试更新最远可达位置
-  for (let i = 0; i < n - 1; i++) {
+  for (let i = 0; i < n; i++) {
     // 如果当前位置i不可达（maxReach小于i），直接返回false
     if (maxReach < i) {
       return false;
@@ -84,8 +84,8 @@ function canJump(nums: number[]): boolean {
     }
   }
 
-  // 遍历结束后，判断最远可达位置是否可以到达或超过最后一个位置
-  return maxReach >= n - 1;
+  // 如果循环正常结束，说明无法到达最后一个位置
+  return false;
 }
 /**
  * 解题思路：贪心算法
