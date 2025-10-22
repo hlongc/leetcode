@@ -805,6 +805,159 @@ async function sendPushWithRetry(subscription, payload, maxRetries = 3) {
    - 处理点击事件
    - 打开或聚焦应用
 
+## 🔄 Service Worker 版本管理
+
+### 为什么需要版本管理？
+
+Service Worker 的版本管理至关重要，因为：
+
+- ❌ 浏览器会缓存 Service Worker 文件
+- ❌ 即使有新版本，旧版本仍会继续运行
+- ❌ 用户可能长时间使用旧版本，导致功能异常
+- ❌ 缓存策略错误可能导致永远无法更新
+
+### 🚀 快速体验版本管理
+
+我们提供了一个完整的 Service Worker 版本管理演示：
+
+```bash
+# 1. 启动服务器（如果还没启动）
+node server-mozilla-ipv4.js
+
+# 2. 打开版本管理演示页面
+http://localhost:3000/sw-version-demo.html
+```
+
+**演示功能：**
+
+- ✅ 版本信息实时显示
+- ✅ 自动检测版本更新
+- ✅ 用户友好的更新提示
+- ✅ 缓存统计和管理
+- ✅ 实时操作日志
+
+### 📋 版本管理策略
+
+我们提供了 **4 种版本管理方案**，适用于不同场景：
+
+| 方案               | 适用场景           | 更新方式 | 用户体验 |
+| ------------------ | ------------------ | -------- | -------- |
+| **方案一：基础**   | 内容网站、博客     | 手动提示 | 友好     |
+| **方案二：自动**   | 实时应用、聊天     | 自动刷新 | 可能打断 |
+| **方案三：智能**   | Web 应用、管理系统 | 智能判断 | 最佳     |
+| **方案四：渐进式** | 大型应用、电商     | 灰度发布 | 可控     |
+
+### 📚 详细文档
+
+查看完整的版本管理指南：
+
+- **[SERVICE-WORKER-VERSION-GUIDE.md](./SERVICE-WORKER-VERSION-GUIDE.md)** - 完整的理论指南和实践方案
+- **[sw-version-demo.html](./sw-version-demo.html)** - 可运行的演示页面
+- **[sw-version-demo.js](./sw-version-demo.js)** - 完整的 Service Worker 实现
+
+### 🎯 关键要点
+
+1. **版本号管理**
+
+   ```javascript
+   // Service Worker 中
+   const VERSION = "1.0.0";
+   const CACHE_NAME = `app-cache-v${VERSION}`;
+   ```
+
+2. **自动更新检测**
+
+   ```javascript
+   // 定期检查更新（每5分钟）
+   setInterval(() => {
+     registration.update();
+   }, 5 * 60 * 1000);
+   ```
+
+3. **用户友好的更新提示**
+
+   ```javascript
+   // 检测到新版本时显示提示
+   if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+     showUpdateNotification(newWorker);
+   }
+   ```
+
+4. **缓存清理**
+   ```javascript
+   // 激活时清理旧缓存
+   caches.keys().then((cacheNames) => {
+     return Promise.all(
+       cacheNames
+         .filter((name) => name !== CACHE_NAME)
+         .map((name) => caches.delete(name))
+     );
+   });
+   ```
+
+### ⚡ 推荐策略
+
+**对于本推送通知项目，推荐使用「智能更新策略」（方案三）：**
+
+- ✅ 在用户空闲时更新
+- ✅ 保存用户数据后再刷新
+- ✅ 关键操作时不打断
+- ✅ 给用户选择权
+
+**核心代码示例：**
+
+```javascript
+// 检测到新版本时
+registration.addEventListener("updatefound", () => {
+  const newWorker = registration.installing;
+
+  newWorker.addEventListener("statechange", () => {
+    if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+      // 检查用户是否繁忙
+      if (!isUserBusy()) {
+        showUpdateDialog(); // 显示友好的更新对话框
+      } else {
+        // 稍后再提示
+        setTimeout(handleUpdate, 60000);
+      }
+    }
+  });
+});
+```
+
+### 🔧 实际应用
+
+在你的项目中使用版本管理：
+
+1. **更新 Service Worker 版本号**
+
+   ```javascript
+   // sw-fixed.js 或 sw-version-demo.js
+   const VERSION = "1.0.1"; // 从 1.0.0 更新到 1.0.1
+   ```
+
+2. **更新 HTML 中的期望版本**
+
+   ```javascript
+   // push-notification-mozilla.html
+   const EXPECTED_VERSION = "1.0.1";
+   ```
+
+3. **部署新版本**
+
+   ```bash
+   # 上传更新后的文件到服务器
+   scp sw-fixed.js server:/path/to/app/
+   scp push-notification-mozilla.html server:/path/to/app/
+   ```
+
+4. **用户自动获得更新**
+   - 用户刷新页面时检测到新版本
+   - 显示友好的更新提示
+   - 用户确认后自动更新
+
+---
+
 ## 🎉 项目特色
 
 - ✅ **解决 Google FCM 连接问题**：使用 Mozilla 推送服务
@@ -812,6 +965,7 @@ async function sendPushWithRetry(subscription, payload, maxRetries = 3) {
 - ✅ **完整错误处理**：详细的错误信息和解决建议
 - ✅ **唯一通知标签**：避免通知被浏览器合并
 - ✅ **订阅管理**：自动清理无效订阅
+- ✅ **版本管理**：完整的 Service Worker 版本更新方案
 - ✅ **详细文档**：完整的流程说明和故障排除指南
 
-这个基于 Mozilla 服务的 Web Push 实现展示了完整的推送通知解决方案，解决了 Google FCM 的连接问题，提供了稳定的推送服务。您可以根据实际需求进行修改和扩展。
+这个基于 Mozilla 服务的 Web Push 实现展示了完整的推送通知解决方案，解决了 Google FCM 的连接问题，提供了稳定的推送服务。包含完整的 Service Worker 版本管理功能，确保用户始终使用最新版本。您可以根据实际需求进行修改和扩展。

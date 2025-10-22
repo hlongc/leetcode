@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SharedWorker - 生产环境版本管理</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .subtitle {
+        color: #666;
+        margin-bottom: 20px;
+      }
+
+      .version-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .version-item {
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #6366f1;
+      }
+
+      .version-item .label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+
+      .version-item .value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        font-family: monospace;
+      }
+
+      .version-item.mismatch {
+        background: #fff3cd;
+        border-left-color: #ffc107;
+      }
+
+      .version-item.mismatch .value {
+        color: #856404;
+      }
+
+      /* 更新通知 */
+      .update-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        padding: 20px;
+        max-width: 400px;
+        animation: slideIn 0.3s ease;
+        z-index: 1000;
+        border-left: 5px solid #ff9800;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(450px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .update-notification .title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .update-notification .message {
+        color: #666;
+        margin-bottom: 15px;
+        font-size: 14px;
+      }
+
+      .update-notification .buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-primary {
+        background: #6366f1;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #4f46e5;
+        transform: translateY(-2px);
+      }
+
+      .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .btn-secondary:hover {
+        background: #d1d5db;
+      }
+
+      .counter-display {
+        text-align: center;
+        padding: 40px;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+
+      .counter-value {
+        font-size: 72px;
+        font-weight: bold;
+        color: white;
+        font-family: "Courier New", monospace;
+      }
+
+      .counter-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        margin-top: 10px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .status-badge.connected {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-badge.checking {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .status-badge.outdated {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+        font-size: 14px;
+      }
+
+      .info-box strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #004085;
+      }
+
+      .log-container {
+        background: #263238;
+        color: #aed581;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 15px;
+      }
+
+      .log-entry {
+        margin: 3px 0;
+      }
+
+      .log-entry.info {
+        color: #64b5f6;
+      }
+
+      .log-entry.success {
+        color: #81c784;
+      }
+
+      .log-entry.warning {
+        color: #ffb74d;
+      }
+
+      .log-entry.error {
+        color: #e57373;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>🔧 SharedWorker 生产环境版本管理</h1>
+        <p class="subtitle">
+          演示如何在生产环境中管理 SharedWorker 版本更新
+          <span class="status-badge connected" id="connectionStatus"
+            >已连接</span
+          >
+        </p>
+
+        <!-- 版本信息 -->
+        <div class="version-info">
+          <div class="version-item">
+            <div class="label">期望版本</div>
+            <div class="value" id="expectedVersion">1.0.0</div>
+          </div>
+          <div class="version-item" id="actualVersionCard">
+            <div class="label">实际版本</div>
+            <div class="value" id="actualVersion">连接中...</div>
+          </div>
+          <div class="version-item">
+            <div class="label">构建时间</div>
+            <div class="value" id="buildTime">--</div>
+          </div>
+          <div class="version-item">
+            <div class="label">客户端 ID</div>
+            <div class="value" id="clientId">--</div>
+          </div>
+        </div>
+
+        <!-- 测试功能 -->
+        <div class="counter-display">
+          <div class="counter-value" id="counterValue">0</div>
+          <div class="counter-label">共享计数器（测试跨标签页同步）</div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-primary" id="incrementBtn">+ 增加</button>
+          <button class="btn btn-primary" id="decrementBtn">- 减少</button>
+          <button class="btn btn-secondary" id="resetBtn">重置</button>
+          <button class="btn btn-secondary" id="checkUpdateBtn">
+            🔄 检查更新
+          </button>
+        </div>
+
+        <!-- 说明 -->
+        <div class="info-box">
+          <strong>💡 测试版本更新：</strong>
+          1. 修改 <code>shared-worker.js</code> 中的
+          <code>WORKER_VERSION</code>（如改为 1.0.1）<br />
+          2. 点击"检查更新"按钮<br />
+          3. 会弹出更新提示<br />
+          4. 点击"立即更新"刷新页面<br />
+          <br />
+          <strong>📝 生产环境建议：</strong>
+          • 使用构建工具自动管理版本号<br />
+          • 定期自动检查更新（已实现：每5分钟）<br />
+          • 提供用户友好的更新提示
+        </div>
+
+        <!-- 日志 -->
+        <div class="log-container" id="logContainer">
+          <div class="log-entry info">等待日志...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ==================== 配置 ====================
+      const EXPECTED_VERSION = "1.0.0"; // 期望的 Worker 版本
+      const CHECK_INTERVAL = 5 * 60 * 1000; // 5分钟检查一次
+      // ==============================================
+
+      let worker;
+      let port;
+      let actualWorkerVersion = null;
+      let checkUpdateTimer = null;
+
+      // DOM 元素
+      const expectedVersionEl = document.getElementById("expectedVersion");
+      const actualVersionEl = document.getElementById("actualVersion");
+      const actualVersionCard = document.getElementById("actualVersionCard");
+      const buildTimeEl = document.getElementById("buildTime");
+      const clientIdEl = document.getElementById("clientId");
+      const counterValueEl = document.getElementById("counterValue");
+      const connectionStatusEl = document.getElementById("connectionStatus");
+      const logContainer = document.getElementById("logContainer");
+
+      // 日志函数
+      function addLog(type, message) {
+        const log = document.createElement("div");
+        log.className = `log-entry ${type}`;
+        log.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logContainer.appendChild(log);
+        logContainer.scrollTop = logContainer.scrollHeight;
+
+        // 限制日志数量
+        const logs = logContainer.querySelectorAll(".log-entry");
+        if (logs.length > 50) {
+          logs[0].remove();
+        }
+      }
+
+      // 连接到 SharedWorker
+      function connectToWorker() {
+        addLog("info", "正在连接到 SharedWorker...");
+
+        // 生产环境：不使用版本号（多标签页共享）
+        // 开发环境：可以添加版本号（每次刷新都是新的）
+        const isDev = false; // 生产环境设为 false
+        const workerUrl = isDev
+          ? `shared-worker.js?v=${Date.now()}`
+          : "shared-worker.js";
+
+        worker = new SharedWorker(workerUrl);
+        port = worker.port;
+
+        port.onmessage = (event) => {
+          const { type, ...data } = event.data;
+
+          switch (type) {
+            case "init":
+              // 初始化
+              actualWorkerVersion = data.version;
+              clientIdEl.textContent = data.clientId;
+              actualVersionEl.textContent = data.version;
+              buildTimeEl.textContent = new Date(data.buildTime).toLocaleString(
+                "zh-CN"
+              );
+              counterValueEl.textContent = data.counter;
+
+              addLog("success", `已连接，客户端 ID: ${data.clientId}`);
+              addLog("info", `Worker 版本: ${data.version}`);
+
+              // 检查版本是否匹配
+              checkVersionMatch(data.version);
+
+              // 开始定期检查更新
+              startUpdateChecker();
+              break;
+
+            case "counter-update":
+              counterValueEl.textContent = data.counter;
+              addLog(
+                "info",
+                `计数器更新为 ${data.counter} (客户端 ${data.updatedBy})`
+              );
+              break;
+
+            case "client-connected":
+              addLog(
+                "success",
+                `新客户端连接 (ID: ${data.clientId})，总连接数: ${data.totalConnections}`
+              );
+              break;
+
+            default:
+              console.log("未处理的消息类型:", type, data);
+          }
+        };
+
+        port.start();
+      }
+
+      // 检查版本是否匹配
+      function checkVersionMatch(actualVersion) {
+        if (actualVersion !== EXPECTED_VERSION) {
+          actualVersionCard.classList.add("mismatch");
+          connectionStatusEl.textContent = "版本不匹配";
+          connectionStatusEl.className = "status-badge outdated";
+          addLog(
+            "warning",
+            `版本不匹配！期望: ${EXPECTED_VERSION}，实际: ${actualVersion}`
+          );
+          showUpdateNotification(actualVersion);
+        } else {
+          actualVersionCard.classList.remove("mismatch");
+          connectionStatusEl.textContent = "已连接";
+          connectionStatusEl.className = "status-badge connected";
+          addLog("success", "版本匹配，运行正常");
+        }
+      }
+
+      // 显示更新通知
+      function showUpdateNotification(newVersion = null) {
+        // 避免重复显示
+        if (document.querySelector(".update-notification")) {
+          return;
+        }
+
+        const notification = document.createElement("div");
+        notification.className = "update-notification";
+        notification.innerHTML = `
+          <div class="title">
+            <span>⚠️</span>
+            <span>检测到新版本</span>
+          </div>
+          <div class="message">
+            ${newVersion ? `新版本 ${newVersion} 可用。` : ""}
+            建议刷新页面以使用最新版本的 SharedWorker。
+          </div>
+          <div class="buttons">
+            <button class="btn btn-primary" onclick="location.reload()">
+              🔄 立即更新
+            </button>
+            <button class="btn btn-secondary" onclick="this.closest('.update-notification').remove()">
+              稍后
+            </button>
+          </div>
+        `;
+        document.body.appendChild(notification);
+        addLog("warning", "已显示更新提示");
+      }
+
+      // 手动检查更新
+      async function checkForUpdates() {
+        connectionStatusEl.textContent = "检查更新中...";
+        connectionStatusEl.className = "status-badge checking";
+        addLog("info", "正在检查更新...");
+
+        try {
+          // 方案1：请求后端API获取最新版本号
+          // const response = await fetch('/api/worker-version');
+          // const { version } = await response.json();
+
+          // 方案2：直接读取 worker 文件内容（仅开发测试用）
+          const response = await fetch(`shared-worker.js?t=${Date.now()}`, {
+            cache: "no-cache",
+          });
+          const text = await response.text();
+          const match = text.match(/const WORKER_VERSION = ["'](.+?)["']/);
+
+          if (match && match[1] !== actualWorkerVersion) {
+            const newVersion = match[1];
+            addLog(
+              "warning",
+              `发现新版本: ${newVersion}，当前版本: ${actualWorkerVersion}`
+            );
+            showUpdateNotification(newVersion);
+            connectionStatusEl.textContent = "有新版本";
+            connectionStatusEl.className = "status-badge outdated";
+          } else {
+            addLog("success", "已是最新版本");
+            connectionStatusEl.textContent = "已连接";
+            connectionStatusEl.className = "status-badge connected";
+          }
+        } catch (error) {
+          addLog("error", "检查更新失败: " + error.message);
+          connectionStatusEl.textContent = "检查失败";
+          connectionStatusEl.className = "status-badge outdated";
+        }
+      }
+
+      // 定期检查更新
+      function startUpdateChecker() {
+        if (checkUpdateTimer) {
+          clearInterval(checkUpdateTimer);
+        }
+
+        checkUpdateTimer = setInterval(() => {
+          addLog("info", "定期检查更新...");
+          checkForUpdates();
+        }, CHECK_INTERVAL);
+
+        addLog(
+          "info",
+          `已启动自动更新检查（间隔 ${CHECK_INTERVAL / 60000} 分钟）`
+        );
+      }
+
+      // 发送消息到 Worker
+      function sendToWorker(type, data = null) {
+        port.postMessage({ type, data });
+      }
+
+      // 按钮事件
+      document.getElementById("incrementBtn").addEventListener("click", () => {
+        sendToWorker("increment");
+      });
+
+      document.getElementById("decrementBtn").addEventListener("click", () => {
+        sendToWorker("decrement");
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        sendToWorker("reset");
+      });
+
+      document
+        .getElementById("checkUpdateBtn")
+        .addEventListener("click", () => {
+          checkForUpdates();
+        });
+
+      // 页面关闭时清理
+      window.addEventListener("beforeunload", () => {
+        if (checkUpdateTimer) {
+          clearInterval(checkUpdateTimer);
+        }
+      });
+
+      // 初始化
+      expectedVersionEl.textContent = EXPECTED_VERSION;
+      connectToWorker();
+    </script>
+  </body>
+</html>

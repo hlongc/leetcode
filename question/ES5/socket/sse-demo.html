@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSE 打字机效果演示</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        width: 100%;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .status-bar {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+      }
+
+      .status-item {
+        flex: 1;
+        min-width: 150px;
+        padding: 15px;
+        border-radius: 10px;
+        background: #f8f9fa;
+        border-left: 4px solid #ddd;
+      }
+
+      .status-item.connected {
+        background: #d4edda;
+        border-left-color: #28a745;
+      }
+
+      .status-item.disconnected {
+        background: #f8d7da;
+        border-left-color: #dc3545;
+      }
+
+      .status-item .label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-item .value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .typewriter-section {
+        margin-bottom: 30px;
+      }
+
+      .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .section-title::before {
+        content: "";
+        width: 4px;
+        height: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 2px;
+      }
+
+      .typewriter-box {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        min-height: 150px;
+        font-size: 18px;
+        line-height: 1.8;
+        color: #333;
+        position: relative;
+      }
+
+      .typewriter-text {
+        display: inline;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        background: #667eea;
+        margin-left: 2px;
+        animation: blink 1s infinite;
+        vertical-align: baseline;
+        position: relative;
+        top: 2px;
+      }
+
+      @keyframes blink {
+        0%,
+        49% {
+          opacity: 1;
+        }
+        50%,
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .time-display {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        font-size: 48px;
+        font-weight: bold;
+        font-family: "Courier New", monospace;
+        letter-spacing: 3px;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      }
+
+      .controls {
+        display: flex;
+        gap: 15px;
+        margin-top: 25px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        flex: 1;
+        min-width: 120px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+      }
+
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+        font-size: 14px;
+        color: #0c5460;
+      }
+
+      .info-box strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #004085;
+      }
+
+      @media (max-width: 600px) {
+        .header h1 {
+          font-size: 22px;
+        }
+
+        .time-display {
+          font-size: 32px;
+        }
+
+        .typewriter-box {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🚀 Server-Sent Events (SSE) 演示</h1>
+        <p>实时服务器推送技术 - 打字机效果</p>
+      </div>
+
+      <div class="content">
+        <!-- 状态栏 -->
+        <div class="status-bar">
+          <div class="status-item" id="typewriterStatus">
+            <div class="label">打字机状态</div>
+            <div class="value">未连接</div>
+          </div>
+          <div class="status-item" id="timeStatus">
+            <div class="label">时间推送状态</div>
+            <div class="value">未连接</div>
+          </div>
+          <div class="status-item">
+            <div class="label">已接收字符</div>
+            <div class="value" id="charCount">0</div>
+          </div>
+        </div>
+
+        <!-- 打字机效果 -->
+        <div class="typewriter-section">
+          <div class="section-title">📝 打字机效果</div>
+          <div class="typewriter-box">
+            <div class="typewriter-text" id="typewriterText"></div>
+            <span class="cursor" id="cursor" style="display: none"></span>
+          </div>
+          <div class="controls">
+            <button class="btn btn-primary" id="startTypewriter">
+              开始打字机
+            </button>
+            <button class="btn btn-danger" id="stopTypewriter" disabled>
+              停止打字机
+            </button>
+            <button class="btn btn-secondary" id="clearText">清空文本</button>
+          </div>
+        </div>
+
+        <!-- 实时时间 -->
+        <div class="typewriter-section">
+          <div class="section-title">⏰ 实时时间推送</div>
+          <div class="time-display" id="timeDisplay">--:--:--</div>
+          <div class="controls">
+            <button class="btn btn-primary" id="startTime">开启时间推送</button>
+            <button class="btn btn-danger" id="stopTime" disabled>
+              停止时间推送
+            </button>
+          </div>
+        </div>
+
+        <!-- 说明 -->
+        <div class="info-box">
+          <strong>💡 技术说明：</strong>
+          SSE (Server-Sent Events) 是一种基于 HTTP
+          的服务器推送技术，允许服务器主动向客户端发送数据。 与 WebSocket
+          不同，SSE 是单向的（服务器→客户端），更适合实时通知、进度更新等场景。
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let typewriterEventSource = null;
+      let timeEventSource = null;
+      let charCount = 0;
+
+      // DOM 元素
+      const typewriterText = document.getElementById("typewriterText");
+      const cursor = document.getElementById("cursor");
+      const charCountEl = document.getElementById("charCount");
+      const typewriterStatus = document.getElementById("typewriterStatus");
+      const timeStatus = document.getElementById("timeStatus");
+      const timeDisplay = document.getElementById("timeDisplay");
+
+      const startTypewriterBtn = document.getElementById("startTypewriter");
+      const stopTypewriterBtn = document.getElementById("stopTypewriter");
+      const clearTextBtn = document.getElementById("clearText");
+      const startTimeBtn = document.getElementById("startTime");
+      const stopTimeBtn = document.getElementById("stopTime");
+
+      // 更新状态显示
+      function updateStatus(element, status, text) {
+        element.className = `status-item ${status}`;
+        element.querySelector(".value").textContent = text;
+      }
+
+      // 开始打字机效果
+      function startTypewriter() {
+        if (typewriterEventSource) {
+          typewriterEventSource.close();
+        }
+
+        typewriterText.textContent = "";
+        cursor.style.display = "inline-block";
+        charCount = 0;
+        charCountEl.textContent = charCount;
+
+        typewriterEventSource = new EventSource("/sse");
+
+        typewriterEventSource.onopen = () => {
+          updateStatus(typewriterStatus, "connected", "已连接");
+          startTypewriterBtn.disabled = true;
+          stopTypewriterBtn.disabled = false;
+        };
+
+        typewriterEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+              case "connected":
+                console.log(data.message);
+                break;
+
+              case "char":
+                typewriterText.textContent += data.char;
+                charCount++;
+                charCountEl.textContent = charCount;
+                break;
+
+              case "done":
+                cursor.style.display = "none";
+                console.log(data.message);
+                setTimeout(() => {
+                  stopTypewriter();
+                }, 1000);
+                break;
+            }
+          } catch (e) {
+            console.error("解析数据失败:", e);
+          }
+        };
+
+        typewriterEventSource.onerror = (error) => {
+          console.error("SSE 错误:", error);
+          updateStatus(typewriterStatus, "disconnected", "连接错误");
+          stopTypewriter();
+        };
+      }
+
+      // 停止打字机
+      function stopTypewriter() {
+        if (typewriterEventSource) {
+          typewriterEventSource.close();
+          typewriterEventSource = null;
+        }
+        cursor.style.display = "none";
+        updateStatus(typewriterStatus, "disconnected", "已断开");
+        startTypewriterBtn.disabled = false;
+        stopTypewriterBtn.disabled = true;
+      }
+
+      // 清空文本
+      function clearText() {
+        typewriterText.textContent = "";
+        charCount = 0;
+        charCountEl.textContent = charCount;
+      }
+
+      // 开始时间推送
+      function startTime() {
+        if (timeEventSource) {
+          timeEventSource.close();
+        }
+
+        timeEventSource = new EventSource("/sse/time");
+
+        timeEventSource.onopen = () => {
+          updateStatus(timeStatus, "connected", "已连接");
+          startTimeBtn.disabled = true;
+          stopTimeBtn.disabled = false;
+        };
+
+        timeEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            timeDisplay.textContent = data.time;
+          } catch (e) {
+            console.error("解析时间数据失败:", e);
+          }
+        };
+
+        timeEventSource.onerror = (error) => {
+          console.error("时间推送 SSE 错误:", error);
+          updateStatus(timeStatus, "disconnected", "连接错误");
+          stopTime();
+        };
+      }
+
+      // 停止时间推送
+      function stopTime() {
+        if (timeEventSource) {
+          timeEventSource.close();
+          timeEventSource = null;
+        }
+        updateStatus(timeStatus, "disconnected", "已断开");
+        startTimeBtn.disabled = false;
+        stopTimeBtn.disabled = true;
+      }
+
+      // 绑定事件
+      startTypewriterBtn.addEventListener("click", startTypewriter);
+      stopTypewriterBtn.addEventListener("click", stopTypewriter);
+      clearTextBtn.addEventListener("click", clearText);
+      startTimeBtn.addEventListener("click", startTime);
+      stopTimeBtn.addEventListener("click", stopTime);
+
+      // 页面关闭时清理连接
+      window.addEventListener("beforeunload", () => {
+        if (typewriterEventSource) typewriterEventSource.close();
+        if (timeEventSource) timeEventSource.close();
+      });
+    </script>
+  </body>
+</html>

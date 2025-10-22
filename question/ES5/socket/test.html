@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="counter">--</div>
+    <div>
+      <button id="plus">加</button>
+      <button id="sub">减</button>
+      <button id="reset">重置</button>
+    </div>
+    <script>
+      const worker = new SharedWorker("shared.js");
+      const port = worker.port;
+      port.start();
+
+      port.onmessage = (e) => {
+        console.log("客户端收到消息", e.data);
+        counter.innerText = e.data.counter;
+      };
+
+      const plusBtn = document.querySelector("#plus");
+      plusBtn.onclick = function () {
+        console.log("点击事件");
+        port.postMessage({ type: "plus" });
+      };
+
+      const subBtn = document.querySelector("#sub");
+      subBtn.onclick = function () {
+        port.postMessage({ type: "sub" });
+      };
+
+      const resetBtn = document.querySelector("#reset");
+      resetBtn.onclick = function () {
+        port.postMessage({ type: "reset" });
+      };
+    </script>
+  </body>
+</html>
