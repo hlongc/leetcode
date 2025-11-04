@@ -41,3 +41,16 @@ var b = 10;
  *
  * 则会输出20，因为这是一个匿名函数表达式，内部定义了新的局部变量b
  */
+
+let obj = {
+  [Symbol.toPrimitive]() {
+    return 200;
+  },
+  valueOf() {
+    return 300;
+  },
+  toString() {
+    return "Hello";
+  },
+};
+console.log(obj + 200);

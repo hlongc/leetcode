@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .demo {
+        margin: 50px;
+      }
+
+      .parent {
+        position: relative;
+        width: 300px;
+        height: 200px;
+        padding: 30px;
+        border: 5px solid #3498db;
+        background: linear-gradient(to right, #e74c3c, #f39c12);
+      }
+
+      .child-negative {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.9);
+        z-index: -1; /* 在 background 之上，但在 content 之下 */
+      }
+
+      .child-zero {
+        position: absolute;
+        top: 50px;
+        left: 80px;
+        width: 100px;
+        height: 100px;
+        background: rgba(46, 204, 113, 0.9);
+        z-index: 0; /* 在 content 之上 */
+      }
+
+      .child-positive {
+        position: absolute;
+        top: 80px;
+        left: 140px;
+        width: 100px;
+        height: 100px;
+        background: rgba(52, 152, 219, 0.9);
+        z-index: 1; /* 最上层 */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo">
+      <h3>z-index 与 background 的关系</h3>
+      <div class="parent">
+        Parent Content（文字在这里）
+        <div class="child-negative">z-index: -1<br />(在 bg 之上)</div>
+        <div class="child-zero">z-index: 0</div>
+        <div class="child-positive">z-index: 1</div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <button id="btn">点击</button>
+    <script>
+      const btn = document.getElementById("btn");
+
+      document.addEventListener("myEvent", (event) => {
+        console.log("监听到了myEvent事件", event);
+      });
+
+      btn.addEventListener("click", (event) => {
+        event.target.dispatchEvent(
+          new CustomEvent("myEvent", {
+            detail: { message: "点击了按钮" },
+            bubbles: true,
+            cancelable: true,
+          })
+        );
+      });
+    </script>
+  </body>
+</html>

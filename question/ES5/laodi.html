@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>渲染频率测量</title>
+  </head>
+  <body>
+    <h1>实际渲染频率测试</h1>
+    <button onclick="startTest()">开始测试</button>
+    <div id="result"></div>
+
+    <script>
+      function startTest() {
+        const result = document.getElementById("result");
+        const timestamps = [];
+        let frameCount = 0;
+        const duration = 1000; // 测试 1 秒
+        const startTime = performance.now();
+
+        function measure() {
+          const now = performance.now();
+          timestamps.push(now);
+          frameCount++;
+
+          if (now - startTime < duration) {
+            requestAnimationFrame(measure);
+          } else {
+            // 计算实际 fps
+            const actualDuration = now - startTime;
+            const fps = (frameCount / actualDuration) * 1000;
+
+            // 计算帧间隔
+            const intervals = [];
+            for (let i = 1; i < timestamps.length; i++) {
+              intervals.push(timestamps[i] - timestamps[i - 1]);
+            }
+
+            const avgInterval =
+              intervals.reduce((a, b) => a + b, 0) / intervals.length;
+            const minInterval = Math.min(...intervals);
+            const maxInterval = Math.max(...intervals);
+
+            result.innerHTML = `
+            <h3>测试结果：</h3>
+            <p>总帧数: ${frameCount}</p>
+            <p>实际 FPS: ${fps.toFixed(2)}</p>
+            <p>平均帧间隔: ${avgInterval.toFixed(2)}ms</p>
+            <p>最小帧间隔: ${minInterval.toFixed(2)}ms</p>
+            <p>最大帧间隔: ${maxInterval.toFixed(2)}ms</p>
+            <p>理论值: 60 FPS, 16.67ms/帧</p>
+          `;
+          }
+        }
+
+        requestAnimationFrame(measure);
+      }
+    </script>
+  </body>
+</html>
