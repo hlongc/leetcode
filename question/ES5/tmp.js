@@ -12,17 +12,17 @@ function fn2() {
     console.log("say hello.");
   };
 }
-fn1.call(fn2); // 1
+fn1.call(fn2); // 1   fn2.num = 111 fn2.sayHey
 
-fn1(); // 1
+fn1(); // 1 window.num = 111  window.sayHay
 fn1.num; // undefined
-fn1.sayHey(); // fn1.sayHey is not a function
+fn1.sayHey(); // reference error
 
-fn2(); // 2
+fn2(); // 2 window.num = 222 window.sayHello
 fn2.num; // 111
-fn2.sayHello(); // fn2.sayHello is not a function
+fn2.sayHello(); // reference error
 
-fn2.sayHey(); //say hey.
+fn2.sayHey(); // say hey.
 
 /* 
 代码解释和输出分析：

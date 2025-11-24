@@ -11,25 +11,22 @@ let list = [
 ];
 
 function convert(list) {
+  const map = {};
+  list.forEach((item) => {
+    map[item.id] = item;
+  });
+
   const ret = [];
-  const map = new Map();
-  const parentIds = list.map((item) => item.parentId);
-  const ids = list.map((item) => item.id);
-  const roots = parentIds.filter((id) => !ids.includes(id));
 
-  for (const item of list) {
-    map.set(item.id, item);
-  }
-
-  for (const item of list) {
-    if (roots.includes(item.parentId)) {
-      ret.push(item);
+  list.forEach((item) => {
+    const parent = map[item.parentId];
+    if (parent) {
+      const children = parent.children || (parent.children = []);
+      children.push(item);
     } else {
-      const parent = map.get(item.parentId);
-      parent.children = parent.children ?? [];
-      parent.children.push(item);
+      ret.push(item);
     }
-  }
+  });
 
   return ret;
 }

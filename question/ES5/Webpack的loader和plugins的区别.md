@@ -217,6 +217,295 @@ function transform(source) {
 }
 ```
 
+### Loader 的 raw 属性（重要 ⭐）
+
+#### 什么是 raw 属性？
+
+`raw` 属性用于控制 **Webpack 传递给 loader 的内容格式**：
+
+- **raw = false**（默认）：Webpack 将文件内容转换为 **UTF-8 字符串**
+- **raw = true**：Webpack 将文件内容保持为 **Buffer**（二进制数据）
+
+#### 基本用法
+
+```javascript
+// 默认情况（raw = false）
+module.exports = function (source) {
+  console.log(typeof source); // "string"
+  console.log(source); // "Hello World"（UTF-8 字符串）
+  return source;
+};
+
+// 处理二进制文件（raw = true）
+module.exports = function (source) {
+  console.log(typeof source); // "object"
+  console.log(source); // <Buffer 48 65 6c 6c 6f ...>
+  console.log(Buffer.isBuffer(source)); // true
+  return source;
+};
+module.exports.raw = true; // ← 设置 raw 属性
+```
+
+#### 何时使用 raw = true？
+
+✅ **需要处理二进制文件时**：
+
+- 图片文件（.png、.jpg、.gif 等）
+- 字体文件（.woff、.ttf 等）
+- 视频/音频文件
+- PDF、ZIP 等二进制格式
+- 需要精确控制字节的场景
+
+#### 示例 1：图片 Loader
+
+```javascript
+// image-loader.js
+const fs = require("fs");
+const path = require("path");
+
+/**
+ * 图片 Loader - 处理图片文件
+ * @param {Buffer} content - 图片的二进制内容
+ */
+module.exports = function (content) {
+  // content 是 Buffer，可以直接操作二进制数据
+  const filename = path.basename(this.resourcePath);
+
+  // 可以对图片进行压缩、转换等操作
+  const optimizedContent = optimizeImage(content);
+
+  // 输出文件
+  this.emitFile(filename, optimizedContent);
+
+  // 返回 JavaScript 模块代码
+  return `module.exports = ${JSON.stringify(filename)}`;
+};
+
+// ⚠️ 关键：设置 raw = true
+module.exports.raw = true;
+
+function optimizeImage(buffer) {
+  // 图片优化逻辑（如压缩、格式转换）
+  return buffer;
+}
+```
+
+#### 示例 2：字体 Loader
+
+```javascript
+// font-loader.js
+module.exports = function (content) {
+  // content 是 Buffer
+  const filename = `fonts/${path.basename(this.resourcePath)}`;
+
+  // 直接输出字体文件
+  this.emitFile(filename, content);
+
+  return `module.exports = ${JSON.stringify(filename)}`;
+};
+
+module.exports.raw = true; // 处理二进制字体文件
+```
+
+#### 示例 3：对比 raw = true vs raw = false
+
+```javascript
+// text-loader.js（处理文本文件）
+module.exports = function (source) {
+  // raw = false（默认）
+  console.log(typeof source); // "string"
+  console.log(source.substring(0, 10)); // ✅ 可以使用字符串方法
+
+  return `export default ${JSON.stringify(source)}`;
+};
+
+// binary-loader.js（处理二进制文件）
+module.exports = function (source) {
+  // raw = true
+  console.log(typeof source); // "object"
+  console.log(source.length); // Buffer 的字节长度
+  console.log(source.slice(0, 10)); // ✅ 可以使用 Buffer 方法
+
+  return source;
+};
+module.exports.raw = true; // ← 必须设置
+```
+
+#### 为什么需要 raw 属性？
+
+**原因 1：避免数据损坏**
+
+```javascript
+// ❌ 如果不设置 raw = true
+// Webpack 会尝试将二进制数据转换为 UTF-8 字符串
+// 这会导致数据损坏（某些字节无法正确转换为字符）
+
+// ✅ 设置 raw = true
+// Webpack 直接传递原始的 Buffer，不做任何转换
+```
+
+**原因 2：正确处理编码**
+
+```javascript
+// 文本文件：UTF-8 字符串就够了
+module.exports = function (source) {
+  return source.toUpperCase(); // 字符串操作
+};
+
+// 二进制文件：需要 Buffer
+module.exports = function (source) {
+  return source.slice(0, 100); // Buffer 操作
+};
+module.exports.raw = true;
+```
+
+#### 实际应用场景
+
+##### 场景 1：file-loader（已弃用，Webpack 5 用 asset modules）
+
+```javascript
+// file-loader 的简化实现
+const loaderUtils = require("loader-utils");
+
+module.exports = function (content) {
+  // content 是 Buffer（图片、字体等二进制文件）
+  const options = this.getOptions();
+
+  // 生成文件名
+  const filename = loaderUtils.interpolateName(
+    this,
+    options.name || "[contenthash].[ext]",
+    { content }
+  );
+
+  // 输出文件
+  this.emitFile(filename, content);
+
+  // 返回文件路径
+  return `module.exports = ${JSON.stringify(filename)}`;
+};
+
+module.exports.raw = true; // ← 必须！否则图片会损坏
+```
+
+##### 场景 2：url-loader
+
+```javascript
+// url-loader 的简化实现
+module.exports = function (content) {
+  const options = this.getOptions();
+  const limit = options.limit || 8192; // 默认 8KB
+
+  // 如果文件小于限制，转为 base64
+  if (content.length < limit) {
+    const base64 = content.toString("base64");
+    const mimeType = getMimeType(this.resourcePath);
+
+    return `module.exports = "data:${mimeType};base64,${base64}"`;
+  }
+
+  // 否则像 file-loader 一样处理
+  // ...
+};
+
+module.exports.raw = true; // ← 必须！才能正确处理二进制
+```
+
+#### raw 属性对比
+
+| 特性            | raw = false（默认）         | raw = true                      |
+| --------------- | --------------------------- | ------------------------------- |
+| **接收类型**    | String                      | Buffer                          |
+| **适用文件**    | 文本文件（.js, .css, .txt） | 二进制文件（.png, .jpg, .woff） |
+| **字符串方法**  | ✅ 可用                     | ❌ 不可用                       |
+| **Buffer 方法** | ❌ 不可用                   | ✅ 可用                         |
+| **数据完整性**  | 文本文件正常                | 二进制文件必须                  |
+| **使用场景**    | Babel、PostCSS、SCSS 编译   | 图片、字体、文件复制            |
+
+#### 常见问题
+
+##### Q1: 忘记设置 raw = true 会怎样？
+
+```javascript
+// ❌ 错误示例：处理图片但没设置 raw
+module.exports = function (source) {
+  // source 被转为字符串，二进制数据损坏
+  console.log(typeof source); // "string"（错误！应该是 Buffer）
+
+  this.emitFile("image.png", source);
+  // 输出的图片文件损坏，无法显示
+};
+// ⚠️ 忘记设置 module.exports.raw = true
+```
+
+##### Q2: 什么时候不需要设置 raw？
+
+```javascript
+// ✅ 处理文本文件，不需要设置 raw
+module.exports = function (source) {
+  // source 是字符串，可以直接处理
+  return source.replace(/foo/g, "bar").toUpperCase();
+};
+// 默认 raw = false，适合文本文件
+```
+
+##### Q3: 可以在一个 Loader 中处理两种格式吗？
+
+```javascript
+// ✅ 可以通过参数控制
+module.exports = function (source) {
+  const options = this.getOptions();
+
+  if (options.binary) {
+    // 作为 Buffer 处理
+    console.log("Buffer 长度:", source.length);
+  } else {
+    // 作为字符串处理
+    console.log("字符串长度:", source.length);
+  }
+
+  return source;
+};
+
+// 根据需要设置 raw
+module.exports.raw = false; // 或 true
+```
+
+#### 总结
+
+**关于你的问题：**
+
+> "webpack loader 导出函数的属性 raw 设置为 true，就代表 webpack 不要对这个 loader 的输入做转换？"
+
+**准确答案：**
+
+✅ **部分正确，但表述不准确**
+
+**准确的说法：**
+
+- `raw = false`（默认）：Webpack **将**文件内容转换为 UTF-8 字符串
+- `raw = true`：Webpack **不**转换，保持为 Buffer（原始二进制数据）
+
+**关键点：**
+
+- 不是"不转换" vs "转换"
+- 而是"转为字符串" vs "保持 Buffer"
+- 用于处理二进制文件（图片、字体等）时必须设置 `raw = true`
+
+**使用场景：**
+
+```javascript
+// 文本文件：使用默认（字符串）
+babel - loader; // raw = false（默认）
+css - loader; // raw = false（默认）
+markdown - loader; // raw = false（默认）
+
+// 二进制文件：必须设置 raw = true
+file - loader; // raw = true ← 必须
+url - loader; // raw = true ← 必须
+image - loader; // raw = true ← 必须
+```
+
 ---
 
 ## 2. Plugin 详解
