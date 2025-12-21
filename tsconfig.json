@@ -8,6 +8,7 @@
   "include": [
     "global.d.ts", // 确保这里包含 global.d.ts
     "**/*.ts",
-    "404.左叶子之和 copy.js"
+    "404.左叶子之和 copy.js",
+    "sliding-window/239.滑动窗口最大值-hard.js"
   ]
 }
