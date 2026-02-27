@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>图片处理工具</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .container {
+        background: white;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+
+      .header h1 {
+        font-size: 18px;
+        margin-bottom: 2px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 11px;
+      }
+
+      .content {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        width: 300px;
+        background: #f8f9ff;
+        border-right: 1px solid #e0e4ff;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar-header {
+        flex-shrink: 0;
+        padding: 12px;
+        background: #f8f9ff;
+      }
+
+      .sidebar-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 12px 12px 12px;
+      }
+
+      .sidebar-footer {
+        flex-shrink: 0;
+        padding: 10px 12px;
+        background: white;
+        border-top: 1px solid #e0e4ff;
+      }
+
+      .main-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .upload-area {
+        border: 2px dashed #667eea;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+      }
+
+      .upload-area:hover {
+        border-color: #764ba2;
+        background: #f0f2ff;
+      }
+
+      .upload-area.dragover {
+        border-color: #764ba2;
+        background: #e8ebff;
+      }
+
+      #fileInput {
+        display: none;
+      }
+
+      .upload-icon {
+        font-size: 28px;
+        margin-bottom: 6px;
+      }
+
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .control-group {
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #e0e4ff;
+      }
+
+      .control-group h3 {
+        color: #667eea;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .control-item {
+        margin-bottom: 8px;
+      }
+
+      .control-item:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 4px;
+        color: #555;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      input[type="number"],
+      input[type="range"],
+      select {
+        width: 100%;
+        padding: 5px 8px;
+        border: 1px solid #e0e4ff;
+        border-radius: 4px;
+        font-size: 12px;
+        transition: border-color 0.3s;
+      }
+
+      input[type="number"]:focus,
+      select:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      input[type="range"] {
+        padding: 0;
+      }
+
+      .range-value {
+        display: inline-block;
+        margin-left: 6px;
+        color: #667eea;
+        font-weight: 600;
+        font-size: 11px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 6px;
+      }
+
+      button {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: white;
+        color: #667eea;
+        border: 1px solid #667eea;
+      }
+
+      .btn-secondary:hover {
+        background: #f0f2ff;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .preview-area {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        height: 100%;
+      }
+
+      .preview-box {
+        border: 1px solid #e0e4ff;
+        border-radius: 6px;
+        padding: 12px;
+        background: white;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .preview-box h3 {
+        color: #667eea;
+        margin-bottom: 10px;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+
+      .canvas-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      .preview-box canvas {
+        max-width: 100%;
+        max-height: calc(100vh - 200px);
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: 4px;
+        background: #f8f9ff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+
+      .image-info {
+        margin-top: 8px;
+        padding: 8px;
+        background: #f8f9ff;
+        border-radius: 4px;
+        font-size: 11px;
+        color: #666;
+        flex-shrink: 0;
+      }
+
+      .image-info div {
+        margin: 2px 0;
+      }
+
+      .image-info strong {
+        color: #667eea;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 1024px) {
+        .content {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid #e0e4ff;
+          max-height: 60vh;
+        }
+
+        .sidebar-content {
+          max-height: calc(60vh - 140px);
+        }
+
+        .preview-area {
+          grid-template-columns: 1fr;
+        }
+
+        .preview-box canvas {
+          max-height: 40vh;
+        }
+
+        .button-group {
+          flex-wrap: wrap;
+        }
+
+        button {
+          min-width: 90px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 16px;
+        }
+
+        .header p {
+          font-size: 10px;
+        }
+
+        .sidebar {
+          max-height: 50vh;
+        }
+
+        .sidebar-content {
+          max-height: calc(50vh - 140px);
+        }
+
+        .control-group {
+          padding: 8px;
+        }
+
+        .control-group h3 {
+          font-size: 12px;
+        }
+
+        label {
+          font-size: 10px;
+        }
+
+        input[type="number"],
+        select {
+          font-size: 11px;
+          padding: 4px 6px;
+        }
+
+        button {
+          padding: 7px 10px;
+          font-size: 11px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎨 图片处理工具</h1>
+        <p>ImageMagick Web版</p>
+      </div>
+
+      <div class="content">
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <div class="upload-area" id="uploadArea">
+              <div class="upload-icon">📁</div>
+              <h2 style="font-size: 13px; margin-bottom: 3px">上传图片</h2>
+              <p style="color: #999; font-size: 10px">点击或拖拽</p>
+              <input type="file" id="fileInput" accept="image/*" />
+            </div>
+          </div>
+
+          <div class="sidebar-content">
+            <div id="controlsSection" class="hidden">
+              <div class="controls">
+                <div class="control-group">
+                  <h3>📏 尺寸调整</h3>
+                  <div class="control-item">
+                    <label
+                      ><input type="checkbox" id="keepRatio" checked />
+                      保持宽高比</label
+                    >
+                  </div>
+                  <div class="control-item">
+                    <label>宽度 (px)</label>
+                    <input type="number" id="width" min="1" value="800" />
+                  </div>
+                  <div class="control-item">
+                    <label>高度 (px)</label>
+                    <input type="number" id="height" min="1" value="600" />
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <h3>⚙️ 图片质量</h3>
+                  <div class="control-item">
+                    <label
+                      >质量
+                      <span class="range-value" id="qualityValue">90</span
+                      >%</label
+                    >
+                    <input
+                      type="range"
+                      id="quality"
+                      min="1"
+                      max="100"
+                      value="90"
+                    />
+                  </div>
+                  <div class="control-item">
+                    <label>输出格式</label>
+                    <select id="format">
+                      <option value="image/jpeg">JPEG</option>
+                      <option value="image/png">PNG</option>
+                      <option value="image/webp">WebP</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <h3>🎨 图片调整</h3>
+                  <div class="control-item">
+                    <label
+                      >亮度
+                      <span class="range-value" id="brightnessValue">100</span
+                      >%</label
+                    >
+                    <input
+                      type="range"
+                      id="brightness"
+                      min="0"
+                      max="200"
+                      value="100"
+                    />
+                  </div>
+                  <div class="control-item">
+                    <label
+                      >对比度
+                      <span class="range-value" id="contrastValue">100</span
+                      >%</label
+                    >
+                    <input
+                      type="range"
+                      id="contrast"
+                      min="0"
+                      max="200"
+                      value="100"
+                    />
+                  </div>
+                  <div class="control-item">
+                    <label
+                      >饱和度
+                      <span class="range-value" id="saturationValue">100</span
+                      >%</label
+                    >
+                    <input
+                      type="range"
+                      id="saturation"
+                      min="0"
+                      max="200"
+                      value="100"
+                    />
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <h3>🔄 旋转</h3>
+                  <div class="control-item">
+                    <label>旋转角度</label>
+                    <select id="rotationAngle">
+                      <option value="0">0°</option>
+                      <option value="90">90°</option>
+                      <option value="180">180°</option>
+                      <option value="270">270°</option>
+                    </select>
+                  </div>
+                  <div class="control-item">
+                    <label>旋转方向</label>
+                    <select id="rotationDirection">
+                      <option value="1">顺时针（向右）</option>
+                      <option value="-1">逆时针（向左）</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <h3>🔄 翻转</h3>
+                  <div class="control-item">
+                    <label
+                      ><input type="checkbox" id="flip" />
+                      水平翻转（镜像）</label
+                    >
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <h3>✨ 滤镜效果</h3>
+                  <div class="control-item">
+                    <label
+                      >模糊
+                      <span class="range-value" id="blurValue">0</span>px</label
+                    >
+                    <input type="range" id="blur" min="0" max="20" value="0" />
+                  </div>
+                  <div class="control-item">
+                    <label><input type="checkbox" id="grayscale" /> 灰度</label>
+                  </div>
+                  <div class="control-item">
+                    <label><input type="checkbox" id="sepia" /> 复古</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-footer" id="buttonSection" style="display: none">
+            <div class="button-group">
+              <button class="btn-primary" id="applyBtn">应用</button>
+              <button class="btn-secondary" id="resetBtn">重置</button>
+              <button class="btn-primary" id="downloadBtn" disabled>
+                下载
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="main-content">
+          <div id="previewSection" class="hidden">
+            <div class="preview-area">
+              <div class="preview-box">
+                <h3>原图</h3>
+                <div class="canvas-wrapper">
+                  <canvas id="originalCanvas"></canvas>
+                </div>
+                <div class="image-info" id="originalInfo"></div>
+              </div>
+              <div class="preview-box">
+                <h3>处理后</h3>
+                <div class="canvas-wrapper">
+                  <canvas id="processedCanvas"></canvas>
+                </div>
+                <div class="image-info" id="processedInfo"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let originalImage = null;
+      let originalWidth = 0;
+      let originalHeight = 0;
+
+      const uploadArea = document.getElementById("uploadArea");
+      const fileInput = document.getElementById("fileInput");
+      const controlsSection = document.getElementById("controlsSection");
+      const buttonSection = document.getElementById("buttonSection");
+      const previewSection = document.getElementById("previewSection");
+      const originalCanvas = document.getElementById("originalCanvas");
+      const processedCanvas = document.getElementById("processedCanvas");
+      const originalInfo = document.getElementById("originalInfo");
+      const processedInfo = document.getElementById("processedInfo");
+
+      const widthInput = document.getElementById("width");
+      const heightInput = document.getElementById("height");
+      const keepRatioCheckbox = document.getElementById("keepRatio");
+      const qualityInput = document.getElementById("quality");
+      const formatSelect = document.getElementById("format");
+      const brightnessInput = document.getElementById("brightness");
+      const contrastInput = document.getElementById("contrast");
+      const saturationInput = document.getElementById("saturation");
+      const rotationAngleSelect = document.getElementById("rotationAngle");
+      const rotationDirectionSelect =
+        document.getElementById("rotationDirection");
+      const flipCheckbox = document.getElementById("flip");
+      const blurInput = document.getElementById("blur");
+      const grayscaleCheckbox = document.getElementById("grayscale");
+      const sepiaCheckbox = document.getElementById("sepia");
+
+      const applyBtn = document.getElementById("applyBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      uploadArea.addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) loadImage(file);
+      });
+
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.classList.add("dragover");
+      });
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("dragover");
+      });
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove("dragover");
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith("image/")) {
+          loadImage(file);
+        }
+      });
+
+      function loadImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            originalImage = img;
+            originalWidth = img.width;
+            originalHeight = img.height;
+
+            originalCanvas.width = img.width;
+            originalCanvas.height = img.height;
+            const ctx = originalCanvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            widthInput.value = img.width;
+            heightInput.value = img.height;
+
+            updateImageInfo(originalInfo, img.width, img.height, file.size);
+
+            controlsSection.classList.remove("hidden");
+            buttonSection.style.display = "block";
+            previewSection.classList.remove("hidden");
+
+            applyEffects();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function updateImageInfo(element, width, height, size) {
+        const sizeKB = size ? (size / 1024).toFixed(2) : "N/A";
+        element.innerHTML = `
+                <div><strong>尺寸:</strong> ${width} × ${height} px</div>
+                <div><strong>文件大小:</strong> ${sizeKB} KB</div>
+            `;
+      }
+
+      widthInput.addEventListener("input", () => {
+        if (keepRatioCheckbox.checked && originalImage) {
+          const ratio = originalHeight / originalWidth;
+          heightInput.value = Math.round(widthInput.value * ratio);
+        }
+      });
+
+      heightInput.addEventListener("input", () => {
+        if (keepRatioCheckbox.checked && originalImage) {
+          const ratio = originalWidth / originalHeight;
+          widthInput.value = Math.round(heightInput.value * ratio);
+        }
+      });
+
+      qualityInput.addEventListener("input", () => {
+        document.getElementById("qualityValue").textContent =
+          qualityInput.value;
+      });
+
+      brightnessInput.addEventListener("input", () => {
+        document.getElementById("brightnessValue").textContent =
+          brightnessInput.value;
+      });
+
+      contrastInput.addEventListener("input", () => {
+        document.getElementById("contrastValue").textContent =
+          contrastInput.value;
+      });
+
+      saturationInput.addEventListener("input", () => {
+        document.getElementById("saturationValue").textContent =
+          saturationInput.value;
+      });
+
+      blurInput.addEventListener("input", () => {
+        document.getElementById("blurValue").textContent = blurInput.value;
+      });
+
+      applyBtn.addEventListener("click", applyEffects);
+
+      function applyEffects() {
+        if (!originalImage) return;
+
+        const width = parseInt(widthInput.value);
+        const height = parseInt(heightInput.value);
+        const angle = parseInt(rotationAngleSelect.value);
+        const direction = parseInt(rotationDirectionSelect.value);
+        const rotation = angle * direction;
+
+        let canvasWidth = width;
+        let canvasHeight = height;
+        if (angle === 90 || angle === 270) {
+          canvasWidth = height;
+          canvasHeight = width;
+        }
+
+        processedCanvas.width = canvasWidth;
+        processedCanvas.height = canvasHeight;
+
+        const ctx = processedCanvas.getContext("2d");
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+        let filters = [];
+
+        if (brightnessInput.value != 100) {
+          filters.push(`brightness(${brightnessInput.value}%)`);
+        }
+        if (contrastInput.value != 100) {
+          filters.push(`contrast(${contrastInput.value}%)`);
+        }
+        if (saturationInput.value != 100) {
+          filters.push(`saturate(${saturationInput.value}%)`);
+        }
+        if (blurInput.value > 0) {
+          filters.push(`blur(${blurInput.value}px)`);
+        }
+        if (grayscaleCheckbox.checked) {
+          filters.push("grayscale(100%)");
+        }
+        if (sepiaCheckbox.checked) {
+          filters.push("sepia(100%)");
+        }
+
+        ctx.filter = filters.join(" ");
+        ctx.save();
+        ctx.translate(canvasWidth / 2, canvasHeight / 2);
+
+        if (rotation !== 0) {
+          ctx.rotate((rotation * Math.PI) / 180);
+        }
+
+        const scaleX = flipCheckbox.checked ? -1 : 1;
+        ctx.scale(scaleX, 1);
+
+        ctx.drawImage(originalImage, -width / 2, -height / 2, width, height);
+        ctx.restore();
+
+        processedCanvas.toBlob(
+          (blob) => {
+            updateImageInfo(
+              processedInfo,
+              canvasWidth,
+              canvasHeight,
+              blob.size
+            );
+          },
+          formatSelect.value,
+          qualityInput.value / 100
+        );
+
+        downloadBtn.disabled = false;
+      }
+
+      resetBtn.addEventListener("click", () => {
+        if (!originalImage) return;
+
+        widthInput.value = originalWidth;
+        heightInput.value = originalHeight;
+        qualityInput.value = 90;
+        brightnessInput.value = 100;
+        contrastInput.value = 100;
+        saturationInput.value = 100;
+        rotationAngleSelect.value = 0;
+        rotationDirectionSelect.value = 1;
+        flipCheckbox.checked = false;
+        blurInput.value = 0;
+        grayscaleCheckbox.checked = false;
+        sepiaCheckbox.checked = false;
+
+        document.getElementById("qualityValue").textContent = "90";
+        document.getElementById("brightnessValue").textContent = "100";
+        document.getElementById("contrastValue").textContent = "100";
+        document.getElementById("saturationValue").textContent = "100";
+        document.getElementById("blurValue").textContent = "0";
+
+        applyEffects();
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        const format = formatSelect.value;
+        const quality = qualityInput.value / 100;
+
+        processedCanvas.toBlob(
+          (blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+
+            const ext = format.split("/")[1];
+            a.download = `processed-image.${ext}`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+          },
+          format,
+          quality
+        );
+      });
+    </script>
+  </body>
+</html>
